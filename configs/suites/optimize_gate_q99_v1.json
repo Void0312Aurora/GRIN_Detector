@@ -1,0 +1,56 @@
+{
+  "name": "optimize_gate_q99_v1",
+  "seeds": [42],
+  "baselines": [
+    {
+      "name": "pseudo_poisson",
+      "method": "pseudo_poisson"
+    }
+  ],
+  "experiments": [
+    {
+      "name": "nn_reflect_padding",
+      "overrides": {
+        "training": {
+          "model_padding_mode": "reflect"
+        }
+      }
+    },
+    {
+      "name": "nn_phase_inputs",
+      "overrides": {
+        "training": {
+          "use_phase_inputs": true
+        }
+      }
+    },
+    {
+      "name": "nn_reflect_phase_inputs",
+      "overrides": {
+        "training": {
+          "use_phase_inputs": true,
+          "model_padding_mode": "reflect"
+        }
+      }
+    },
+    {
+      "name": "nn_reflect_padding_residual020",
+      "overrides": {
+        "training": {
+          "model_padding_mode": "reflect",
+          "pseudo_poisson_residual_scale": 0.2
+        }
+      }
+    },
+    {
+      "name": "nn_reflect_phase_residual020",
+      "overrides": {
+        "training": {
+          "use_phase_inputs": true,
+          "model_padding_mode": "reflect",
+          "pseudo_poisson_residual_scale": 0.2
+        }
+      }
+    }
+  ]
+}

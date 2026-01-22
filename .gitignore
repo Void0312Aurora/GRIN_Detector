@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# local datasets & run artifacts
+data/
+runs/
+outputs/
+*.npz
+*.pt
+*.pth
+

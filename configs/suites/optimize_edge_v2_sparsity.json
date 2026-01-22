@@ -1,0 +1,53 @@
+{
+  "name": "optimize_edge_v2_sparsity",
+  "seeds": [42],
+  "baselines": [
+    {
+      "name": "pseudo_poisson",
+      "method": "pseudo_poisson"
+    },
+    {
+      "name": "oracle_poisson_upper_bound",
+      "method": "oracle_poisson"
+    }
+  ],
+  "experiments": [
+    {
+      "name": "nn_reflect_padding",
+      "overrides": {
+        "training": {
+          "model_padding_mode": "reflect"
+        }
+      }
+    },
+    {
+      "name": "nn_coord_reflect_base",
+      "overrides": {
+        "training": {
+          "use_coord_inputs": true,
+          "model_padding_mode": "reflect"
+        }
+      }
+    },
+    {
+      "name": "nn_coord_reflect_sparse1e3",
+      "overrides": {
+        "training": {
+          "use_coord_inputs": true,
+          "model_padding_mode": "reflect",
+          "sparsity_weight": 0.001
+        }
+      }
+    },
+    {
+      "name": "nn_coord_reflect_sparse2e3",
+      "overrides": {
+        "training": {
+          "use_coord_inputs": true,
+          "model_padding_mode": "reflect",
+          "sparsity_weight": 0.002
+        }
+      }
+    }
+  ]
+}

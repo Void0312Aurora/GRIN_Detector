@@ -1,0 +1,75 @@
+{
+  "name": "ablation_signless_v1",
+  "seeds": [42],
+  "baselines": [
+    {
+      "name": "pseudo_poisson",
+      "method": "pseudo_poisson"
+    },
+    {
+      "name": "oracle_poisson_upper_bound",
+      "method": "oracle_poisson"
+    }
+  ],
+  "experiments": [
+    {
+      "name": "nn_default",
+      "overrides": {
+        "training": {
+          "use_pseudo_poisson_prior": false,
+          "pseudo_poisson_prior_as_input": false,
+          "teacher_loss_weight": 0.0
+        }
+      }
+    },
+    {
+      "name": "nn_teacher_only",
+      "overrides": {
+        "training": {
+          "use_pseudo_poisson_prior": false,
+          "pseudo_poisson_prior_as_input": false,
+          "teacher_loss_weight": 0.1,
+          "teacher_loss_type": "l1"
+        }
+      }
+    },
+    {
+      "name": "nn_prior_residual",
+      "overrides": {
+        "training": {
+          "use_pseudo_poisson_prior": true,
+          "pseudo_poisson_prior_as_input": false,
+          "pseudo_poisson_prior_scale": 1.0,
+          "pseudo_poisson_residual_scale": 0.15,
+          "teacher_loss_weight": 0.0
+        }
+      }
+    },
+    {
+      "name": "nn_prior_residual_input",
+      "overrides": {
+        "training": {
+          "use_pseudo_poisson_prior": true,
+          "pseudo_poisson_prior_as_input": true,
+          "pseudo_poisson_prior_scale": 1.0,
+          "pseudo_poisson_residual_scale": 0.15,
+          "teacher_loss_weight": 0.0
+        }
+      }
+    },
+    {
+      "name": "nn_prior_residual_teacher",
+      "overrides": {
+        "training": {
+          "use_pseudo_poisson_prior": true,
+          "pseudo_poisson_prior_as_input": true,
+          "pseudo_poisson_prior_scale": 1.0,
+          "pseudo_poisson_residual_scale": 0.15,
+          "teacher_loss_weight": 0.1,
+          "teacher_loss_type": "l1"
+        }
+      }
+    }
+  ]
+}
+

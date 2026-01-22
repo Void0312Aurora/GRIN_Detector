@@ -1,0 +1,70 @@
+{
+  "name": "optimize_edge_v1",
+  "seeds": [42],
+  "baselines": [
+    {
+      "name": "pseudo_poisson",
+      "method": "pseudo_poisson"
+    },
+    {
+      "name": "oracle_poisson_upper_bound",
+      "method": "oracle_poisson"
+    }
+  ],
+  "experiments": [
+    {
+      "name": "nn_prior_residual_input",
+      "overrides": {
+        "training": {
+          "use_pseudo_poisson_prior": true,
+          "pseudo_poisson_prior_as_input": true,
+          "pseudo_poisson_prior_scale": 1.0,
+          "pseudo_poisson_residual_scale": 0.15,
+          "teacher_loss_weight": 0.0
+        }
+      }
+    },
+    {
+      "name": "nn_phase_inputs",
+      "overrides": {
+        "training": {
+          "use_phase_inputs": true
+        }
+      }
+    },
+    {
+      "name": "nn_coord_inputs",
+      "overrides": {
+        "training": {
+          "use_coord_inputs": true
+        }
+      }
+    },
+    {
+      "name": "nn_reflect_padding",
+      "overrides": {
+        "training": {
+          "model_padding_mode": "reflect"
+        }
+      }
+    },
+    {
+      "name": "nn_coord_reflect",
+      "overrides": {
+        "training": {
+          "use_coord_inputs": true,
+          "model_padding_mode": "reflect"
+        }
+      }
+    },
+    {
+      "name": "nn_edge_band_suppress",
+      "overrides": {
+        "training": {
+          "defect_roi_radius": 1.0,
+          "edge_band_suppress_weight": 0.05
+        }
+      }
+    }
+  ]
+}
