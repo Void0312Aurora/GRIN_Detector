@@ -219,6 +219,14 @@ def evaluate_checkpoint(
     use_prior = bool(model_meta.get("use_pseudo_poisson_prior", False))
     prior_as_input = bool(model_meta.get("pseudo_poisson_prior_as_input", False))
     prior_scale = float(model_meta.get("pseudo_poisson_prior_scale", 1.0))
+    prior_pad = int(model_meta.get("pseudo_poisson_poisson_pad", getattr(cfg.training, "pseudo_poisson_poisson_pad", 0) or 0))
+    prior_pad_mode = str(model_meta.get("pseudo_poisson_pad_mode", getattr(cfg.training, "pseudo_poisson_pad_mode", "reflect")))
+    prior_apply_taper = bool(
+        model_meta.get("pseudo_poisson_apply_edge_taper", getattr(cfg.training, "pseudo_poisson_apply_edge_taper", False))
+    )
+    prior_taper_margin = float(
+        model_meta.get("pseudo_poisson_taper_margin", getattr(cfg.training, "pseudo_poisson_taper_margin", 0.25))
+    )
     padding_mode = str(model_meta.get("model_padding_mode", getattr(cfg.training, "model_padding_mode", "zeros")))
     residual_scale = model_meta.get("pseudo_poisson_residual_scale", None)
     output_scale = None
@@ -286,6 +294,10 @@ def evaluate_checkpoint(
         "edge_mean_abs": [],
         "edge_p95_abs": [],
     }
+    pp_pad = int(getattr(cfg.training, "pseudo_poisson_poisson_pad", 0) or 0)
+    pp_pad_mode = str(getattr(cfg.training, "pseudo_poisson_pad_mode", "reflect"))
+    pp_apply_taper = bool(getattr(cfg.training, "pseudo_poisson_apply_edge_taper", False))
+    pp_taper_margin = float(getattr(cfg.training, "pseudo_poisson_taper_margin", 0.25))
 
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -307,6 +319,10 @@ def evaluate_checkpoint(
                     diff_ts=diff_ts,
                     defect_roi_radius=float(cfg.training.defect_roi_radius),
                     apply_edge_offset=True,
+                    poisson_pad=prior_pad,
+                    pad_mode=prior_pad_mode,
+                    apply_edge_taper=prior_apply_taper,
+                    taper_margin=prior_taper_margin,
                 )
 
             inputs = _prepare_inputs(batch, physics, cfg)
@@ -550,6 +566,10 @@ def evaluate_pseudo_poisson(
         "edge_mean_abs": [],
         "edge_p95_abs": [],
     }
+    pp_pad = int(getattr(cfg.training, "pseudo_poisson_poisson_pad", 0) or 0)
+    pp_pad_mode = str(getattr(cfg.training, "pseudo_poisson_pad_mode", "reflect"))
+    pp_apply_taper = bool(getattr(cfg.training, "pseudo_poisson_apply_edge_taper", False))
+    pp_taper_margin = float(getattr(cfg.training, "pseudo_poisson_taper_margin", 0.25))
 
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -570,6 +590,10 @@ def evaluate_pseudo_poisson(
                 diff_ts=diff_ts,
                 defect_roi_radius=float(cfg.training.defect_roi_radius),
                 apply_edge_offset=True,
+                poisson_pad=pp_pad,
+                pad_mode=pp_pad_mode,
+                apply_edge_taper=pp_apply_taper,
+                taper_margin=pp_taper_margin,
             )
             defect_true = batch["defect"]
             if regions is None:
@@ -823,6 +847,10 @@ def evaluate_oracle_poisson(
                 diff_ts=diff_ts,
                 defect_roi_radius=float(cfg.training.defect_roi_radius),
                 apply_edge_offset=True,
+                poisson_pad=pp_pad,
+                pad_mode=pp_pad_mode,
+                apply_edge_taper=pp_apply_taper,
+                taper_margin=pp_taper_margin,
             )
 
             for dp, dt in zip(defect_pred, defect_true):

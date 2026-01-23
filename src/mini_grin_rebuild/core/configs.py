@@ -54,6 +54,7 @@ class SimulationConfig:
     scratch_width_max_um: float = 5.0
     scratch_length_min_um: float = 20.0
     scratch_length_max_um: float = 80.0
+    defect_scratch_prob: float = 0.5
     # Defect sampling controls (dataset generation only; does not affect physics).
     defect_center_sigma_norm: float = 0.0
     defect_center_max_radius_norm: float = 0.5
@@ -132,6 +133,10 @@ class TrainingConfig:
     pseudo_poisson_prior_as_input: bool = True
     pseudo_poisson_prior_scale: float = 1.0
     pseudo_poisson_residual_scale: float = 0.0
+    pseudo_poisson_poisson_pad: int = 0
+    pseudo_poisson_pad_mode: str = "reflect"
+    pseudo_poisson_apply_edge_taper: bool = False
+    pseudo_poisson_taper_margin: float = 0.25
 
     # Optional teacher distillation towards pseudo-poisson (kept off by default).
     teacher_loss_weight: float = 0.0

@@ -149,6 +149,10 @@ def _prepare_batch_inputs(
                 diff_ts=diff_ts,
                 defect_roi_radius=float(cfg.defect_roi_radius),
                 apply_edge_offset=True,
+                poisson_pad=int(getattr(cfg, "pseudo_poisson_poisson_pad", 0) or 0),
+                pad_mode=str(getattr(cfg, "pseudo_poisson_pad_mode", "reflect")),
+                apply_edge_taper=bool(getattr(cfg, "pseudo_poisson_apply_edge_taper", False)),
+                taper_margin=float(getattr(cfg, "pseudo_poisson_taper_margin", 0.25)),
             )
 
     crop_size = int(getattr(cfg, "crop_size", 0) or 0)
@@ -412,6 +416,10 @@ def train_dataset(
                 "pseudo_poisson_prior_as_input": bool(train_cfg.pseudo_poisson_prior_as_input),
                 "pseudo_poisson_prior_scale": float(train_cfg.pseudo_poisson_prior_scale),
                 "pseudo_poisson_residual_scale": float(residual_scale),
+                "pseudo_poisson_poisson_pad": int(getattr(train_cfg, "pseudo_poisson_poisson_pad", 0) or 0),
+                "pseudo_poisson_pad_mode": str(getattr(train_cfg, "pseudo_poisson_pad_mode", "reflect")),
+                "pseudo_poisson_apply_edge_taper": bool(getattr(train_cfg, "pseudo_poisson_apply_edge_taper", False)),
+                "pseudo_poisson_taper_margin": float(getattr(train_cfg, "pseudo_poisson_taper_margin", 0.25)),
                 "crop_size": int(train_cfg.crop_size),
                 "crop_strategy": str(train_cfg.crop_strategy),
                 "teacher_loss_weight": float(train_cfg.teacher_loss_weight),
