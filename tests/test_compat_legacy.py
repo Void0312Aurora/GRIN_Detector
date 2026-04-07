@@ -9,11 +9,14 @@ import torch
 
 
 def _bootstrap_src() -> None:
-    root = Path(__file__).resolve().parents[1]
-    src = root / "src"
+    project_root = Path(__file__).resolve().parents[1]
+    workspace_root = project_root.parent
+    src = project_root / "src"
     import sys
 
-    sys.path.insert(0, str(src))
+    for path in (src, workspace_root / "Archive", workspace_root):
+        if path.exists():
+            sys.path.insert(0, str(path))
 
 
 _bootstrap_src()

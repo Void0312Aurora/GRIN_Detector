@@ -1,0 +1,21 @@
+{
+  "path": "/home/void0312/PINNs/mini_grin_rebuild/external_data/raw/zenodo_10365872_subset/Fig3_CSI_50x_AM.plux",
+  "size_bytes": 9719899,
+  "suffix": ".plux",
+  "md5": "c9e5c28a0a473929e17d79cb96a9d882",
+  "kind": "zip_container",
+  "zip_valid": true,
+  "member_count": 10,
+  "sample_members": [
+    "LAYER_0.raw",
+    "LAYER_0.stack.raw",
+    "z.thumbnail",
+    "stack.thumbnail",
+    "index.xml",
+    "Analysis/criticalDimensions.txt",
+    "Analysis/display.txt",
+    "Analysis/recipe.txt",
+    "metrics.txt",
+    "recipe.txt"
+  ]
+}

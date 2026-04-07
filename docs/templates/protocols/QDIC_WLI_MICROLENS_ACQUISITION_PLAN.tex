@@ -1,0 +1,479 @@
+\documentclass[UTF8,a4paper,11pt]{ctexart}
+
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{siunitx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!50!black
+}
+
+\captionsetup{font=small,labelfont=bf}
+\setlist[itemize]{leftmargin=1.8em}
+\setlist[enumerate]{leftmargin=2.0em}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\setlength{\headheight}{14pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{qDIC + WLI 微透镜联合采集实验方案}
+\rhead{\today}
+\cfoot{\thepage/\pageref{LastPage}}
+
+\newcommand{\Code}[1]{\texttt{#1}}
+\newcommand{\Strong}[1]{\textbf{#1}}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  {\LARGE \bfseries qDIC + 白光干涉仪微透镜联合采集实验方案\par}
+  \vspace{1.2em}
+  {\large mini\_grin\_rebuild\par}
+  \vspace{2.5em}
+
+  \begin{tabular}{>{\bfseries}p{0.24\textwidth} p{0.64\textwidth}}
+    文档类型 & 数据采集实验定义 \\
+    适用对象 & qDIC / 定量微分相衬显微镜 + WLI / 白光干涉仪 \\
+    版本 & v1 \\
+    日期 & \today \\
+  \end{tabular}
+
+  \vfill
+
+  \begin{minipage}{0.92\textwidth}
+    \textbf{一句话定义} \\
+    对同一颗微透镜，在 \Code{clean / defect} 两种状态下，用 qDIC 采真实输入，用 WLI 采几何参考，
+    构造可配对、可验证当前主线假设的 pilot 数据集。
+  \end{minipage}
+
+  \vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{实验定义}
+
+这份文档定义的是一个\Strong{具体的数据采集实验}，不是泛化的真实验证建议。
+
+实验名称：
+\begin{itemize}
+  \item \Code{qDIC + WLI paired microlens acquisition pilot}
+\end{itemize}
+
+实验目标：
+\begin{itemize}
+  \item 用 \Strong{qDIC / 定量微分相衬显微镜} 采集与最终应用场景一致的微透镜观测数据
+  \item 用 \Strong{WLI / 白光干涉仪} 为同一颗微透镜提供计量级 3D 形貌参考
+  \item 建立同一颗微透镜在 \Code{clean / defect} 两种状态下的跨模态配对数据
+  \item 为当前 \Code{mini\_grin\_rebuild} 主线提供可用于真实验证的 pilot 数据
+\end{itemize}
+
+这次实验的核心不是“多采一些显微图”，而是构造一套能够支持下列判断的数据：
+\begin{enumerate}
+  \item 当前基线在真实 qDIC 数据上是否仍然成立
+  \item WLI 是否能为 qDIC 提供足够可靠的形貌参考
+  \item 微透镜真实样本是否满足当前方法依赖的“平滑标准面 + 稀疏小缺陷”结构假设
+\end{enumerate}
+
+\section{两台仪器各自承担的角色}
+
+\subsection{qDIC 的角色}
+
+qDIC 是\Strong{主观测模态}，地位上对应当前项目里最终希望处理的真实输入。
+
+本实验中，qDIC 负责：
+\begin{itemize}
+  \item 采集真实微透镜在 \Code{clean / defect} 状态下的主输入数据
+  \item 记录重复采集稳定性
+  \item 提供后续 QC / gating 的真实观测对象
+  \item 保留 raw 数据与仪器导出的中间结果
+\end{itemize}
+
+\subsection{WLI 的角色}
+
+WLI 是\Strong{计量参考模态}，不是主部署模态。
+
+本实验中，WLI 负责：
+\begin{itemize}
+  \item 给出同一颗微透镜的 3D 高度图
+  \item 用于估计 clean 状态下的标准面
+  \item 用于估计 defect 状态下相对 clean 标准面的残差
+  \item 用于判断真实样本是否满足当前方法的稀疏性假设
+  \item 为 qDIC 结果提供弱 GT / 计量参考
+\end{itemize}
+
+一句话概括：
+\begin{itemize}
+  \item qDIC 负责“真实输入”
+  \item WLI 负责“真实几何参考”
+\end{itemize}
+
+\section{当前代码变量与真实实验对象的映射}
+
+为了让这次采集能接进当前主线，必须先定义清楚概念映射。
+
+\begin{longtable}{p{0.22\textwidth} p{0.34\textwidth} p{0.32\textwidth}}
+\toprule
+当前主线概念 & 真实实验中的对应物 & 备注 \\
+\midrule
+\endfirsthead
+\toprule
+当前主线概念 & 真实实验中的对应物 & 备注 \\
+\midrule
+\endhead
+\Code{standard} & 同一颗 clean 微透镜的 qDIC / WLI 采集 & clean 状态必须重复采集 \\
+\Code{test} & 同一颗 defect 微透镜的 qDIC / WLI 采集 & 最好是同一颗 lens 在缺陷注入后的状态 \\
+\Code{reference} & 计算参考面或会话级参考件 & 不建议强行要求每颗 lens 都有物理 reference 图 \\
+\Code{defect\_true} & \Code{WLI(test) - fitted\_standard\_from\_WLI(clean)} & 最重要的弱 GT 候选 \\
+\Code{diff\_ts} & qDIC 的 \Code{test - standard} 配对观测 & 当前主线最关键 \\
+\Code{diff\_sr} & clean 标准面相对 reference 的差异 & 可由 WLI clean 拟合得到，或在实测中弱化处理 \\
+\bottomrule
+\end{longtable}
+
+这里最重要的决定是：
+\begin{itemize}
+  \item \Strong{\Code{reference} 不必等于每颗样本都采一个物理 reference 图。}
+\end{itemize}
+
+对当前实验，更实际的做法是：
+\begin{enumerate}
+  \item 对 clean WLI 形貌拟合出微透镜名义标准面
+  \item 将该名义标准面作为\Strong{计算参考面}
+  \item 真实实验中的主配对关系聚焦在 \Code{standard(clean)} 与 \Code{test(defect)}
+\end{enumerate}
+
+\section{本次 pilot 的核心假设}
+
+这次具体采集实验要验证的不是所有可能的问题，而是下面 5 条：
+\begin{enumerate}
+  \item qDIC 在同一颗 clean 微透镜上的重复采集是稳定的
+  \item WLI 在同一颗 clean 微透镜上的重复扫描足够稳定，可作为几何参考
+  \item 同一颗微透镜在 \Code{clean -> defect} 变化后，WLI 残差表现为局部稀疏缺陷，而不是全域粗糙化
+  \item qDIC 与 WLI 可以在同一颗 lens 上完成跨模态配对与空间对齐
+  \item 用 WLI clean 拟合得到的标准面，足以支撑当前方法所需的“标准面 + 缺陷残差”定义
+\end{enumerate}
+
+\section{本次实验的最小输出}
+
+\subsection{qDIC 侧}
+\begin{itemize}
+  \item clean 状态重复采集
+  \item defect 状态重复采集
+  \item raw 数据
+  \item 仪器导出的 phase / gradient / processed image（若仪器软件提供）
+  \item 会话级参考件或校准数据
+\end{itemize}
+
+\subsection{WLI 侧}
+\begin{itemize}
+  \item clean 状态 topography
+  \item defect 状态 topography
+  \item raw 高度图
+  \item valid mask
+  \item 去 tilt / 去 form 后的 residual map
+  \item clean 标准面拟合结果
+\end{itemize}
+
+\subsection{跨模态侧}
+\begin{itemize}
+  \item qDIC 与 WLI 的 lens identity 对应关系
+  \item stage 坐标或视场对应关系
+  \item registration transform
+  \item 每颗 lens 的 \Code{clean / defect} 配对关系
+\end{itemize}
+
+如果缺少这些核心产物中的任意一类，这次实验很难支撑后续模型验证。
+
+\section{首轮 pilot 的样本设计}
+
+建议不要把第一轮做成“大规模数据采集”，而是做成“高可解释 pilot”。
+
+\subsection{样本组 1：clean repeat}
+
+目的：
+\begin{itemize}
+  \item 测仪器稳定性
+  \item 测跨模态对齐可行性
+  \item 测 clean 样本是否会被算法误判成缺陷
+\end{itemize}
+
+建议数量：
+\begin{itemize}
+  \item 3 颗 clean 微透镜
+\end{itemize}
+
+每颗采集：
+\begin{itemize}
+  \item qDIC：5 repeats
+  \item WLI：2 repeats
+\end{itemize}
+
+\subsection{样本组 2：paired seeded defect}
+
+目的：
+\begin{itemize}
+  \item 构造最强的因果对照
+  \item 让 \Code{clean -> defect} 的变化可以被明确解释
+\end{itemize}
+
+建议数量：
+\begin{itemize}
+  \item 3 颗微透镜
+\end{itemize}
+
+每颗状态：
+\begin{itemize}
+  \item clean 状态：qDIC 5 次，WLI 2 次
+  \item defect 状态：qDIC 5 次，WLI 2 次
+\end{itemize}
+
+缺陷注入优先顺序：
+\begin{enumerate}
+  \item 微粒污染
+  \item 轻微附着物
+  \item 可控局部划痕
+\end{enumerate}
+
+第一轮不建议上大面积粗糙化或不可逆强破坏。
+
+\subsection{样本组 3：自然缺陷样本（可选）}
+
+目的：
+\begin{itemize}
+  \item 观察真实工艺缺陷是否偏离当前假设
+\end{itemize}
+
+建议数量：
+\begin{itemize}
+  \item 2 到 3 颗
+\end{itemize}
+
+这组只用于边界分析，不作为第一轮主结论依据。
+
+\section{单颗 lens 的标准采集流程}
+
+对每颗样本建议固定为以下顺序。
+
+\subsection{Phase 0: 会话级校准}
+\begin{itemize}
+  \item qDIC 采参考件 / 平场 / 暗场 / 仪器校准
+  \item WLI 做当天标定与参考检查
+  \item 记录环境条件、操作员、物镜、NA、曝光、光源
+\end{itemize}
+
+\subsection{Phase 1: clean 状态 qDIC}
+\begin{itemize}
+  \item 固定样本方向
+  \item 低倍 overview 记录样本整体位置
+  \item 切到目标视场，只保留单颗 lens
+  \item 采 clean qDIC repeats
+\end{itemize}
+
+\subsection{Phase 2: clean 状态 WLI}
+\begin{itemize}
+  \item 尽量不改变样本朝向
+  \item 记录 stage 坐标与 orientation
+  \item 对同一颗 lens 做 clean WLI 扫描
+\end{itemize}
+
+\subsection{Phase 3: 缺陷注入}
+\begin{itemize}
+  \item 在显微镜外或专用工位上引入可控缺陷
+  \item 记录缺陷类型、注入方式、是否可逆
+\end{itemize}
+
+\subsection{Phase 4: defect 状态 qDIC}
+\begin{itemize}
+  \item 返回同一颗 lens
+  \item 对齐到同一视场
+  \item 采 defect qDIC repeats
+\end{itemize}
+
+\subsection{Phase 5: defect 状态 WLI}
+\begin{itemize}
+  \item 对同一颗 lens 做 defect WLI 扫描
+\end{itemize}
+
+\subsection{Phase 6: 当天 quick check}
+\begin{itemize}
+  \item 检查 raw 文件是否完整
+  \item 检查 clean / defect 是否混淆
+  \item 检查 qDIC 与 WLI 是否能映射到同一 lens
+  \item 检查 clean WLI residual 是否明显小于 defect residual
+\end{itemize}
+
+\section{视场与配准要求}
+
+\subsection{视场要求}
+\begin{itemize}
+  \item 单次采集中只包含一颗微透镜
+  \item aperture 边界完整
+  \item 保留少量边缘余量
+  \item 避免严重遮挡、过曝、截断
+\end{itemize}
+
+\subsection{配准要求}
+\begin{itemize}
+  \item 样本方向标记
+  \item 样本编号
+  \item 低倍 overview 图
+  \item stage 坐标
+  \item 若可能，加入可见 fiducial
+\end{itemize}
+
+跨模态配准至少要做到：
+\begin{itemize}
+  \item 能确定“这张 qDIC 图”和“这张 WLI 图”来自同一颗 lens
+  \item 能将两者裁剪到同一 aperture 区域
+  \item 第一轮不要求像素级完美配准，但必须做到 lens identity 级正确配对
+\end{itemize}
+
+\section{当前主线下推荐的两种实验模式}
+
+\subsection{模式 A：最小闭环模式}
+
+输入：
+\begin{itemize}
+  \item qDIC clean
+  \item qDIC defect
+  \item WLI clean
+  \item WLI defect
+\end{itemize}
+
+用途：
+\begin{itemize}
+  \item 先验证主假设是否成立
+  \item 不强依赖真实 \Code{reference} 图
+\end{itemize}
+
+这是第一轮最推荐的模式。
+
+\subsection{模式 B：增强参考模式}
+
+额外增加：
+\begin{itemize}
+  \item qDIC 参考件 / 光路参考
+  \item WLI 参考平面 / 标准样
+  \item clean WLI 标准面拟合与 form removal
+\end{itemize}
+
+用途：
+\begin{itemize}
+  \item 更接近当前代码里的 \Code{reference / standard / test}
+  \item 更有利于后续把真实数据做成结构化 benchmark
+\end{itemize}
+
+如果第一轮 pilot 顺利，第二轮再上这个模式更合适。
+
+\section{当天必须记录的元数据}
+
+最少应记录：
+\begin{itemize}
+  \item \Code{session\_id}
+  \item \Code{sample\_id}
+  \item \Code{lens\_id}
+  \item \Code{state}: \Code{clean / defect}
+  \item \Code{modality}: \Code{qdic / wli}
+  \item \Code{repeat\_index}
+  \item \Code{operator}
+  \item \Code{instrument\_name}
+  \item \Code{objective}
+  \item \Code{na}
+  \item \Code{wavelength\_nm}
+  \item \Code{pixel\_pitch\_um}
+  \item \Code{fov\_um}
+  \item \Code{exposure\_ms}
+  \item \Code{gain}
+  \item \Code{illumination}
+  \item \Code{stage\_xyz}
+  \item \Code{orientation\_mark}
+  \item \Code{single\_lens\_in\_fov}
+  \item \Code{aperture\_visible}
+  \item \Code{paired\_clean\_capture\_id}
+  \item \Code{paired\_wli\_capture\_id}
+  \item \Code{raw\_file\_paths}
+  \item \Code{notes}
+\end{itemize}
+
+配套模板见：
+\begin{itemize}
+  \item \Code{external\_data/templates/qdic\_wli\_session\_manifest.example.json}
+\end{itemize}
+
+\section{结果验收标准}
+
+第一轮不建议设过于激进的性能阈值，但必须有最低验收条件。
+
+\subsection{采集侧最低验收}
+\begin{itemize}
+  \item qDIC clean repeats 全部可读
+  \item WLI clean / defect 高度图可读
+  \item 同一颗 lens 的 qDIC 与 WLI 成功配对
+  \item raw 文件、元数据、样本编号一致
+\end{itemize}
+
+\subsection{几何侧最低验收}
+\begin{itemize}
+  \item clean WLI 可拟合出稳定标准面
+  \item defect WLI 相对 clean 标准面出现局部残差
+  \item 若 clean WLI 本身就是大面积纹理/粗糙起伏，则该样本标为 out-of-scope
+\end{itemize}
+
+\subsection{算法侧最低验收}
+\begin{itemize}
+  \item qDIC clean 重建结果不应大量产生假缺陷
+  \item qDIC defect 相比 clean 应表现出局部可解释差异
+  \item QC 指标在 clean / defect / bad capture 之间应有分层
+\end{itemize}
+
+\section{这次实验真正要回答的结论}
+
+实验结束后，必须明确回答以下问题：
+\begin{enumerate}
+  \item qDIC + WLI 是否能构成稳定的同 lens 配对数据集？
+  \item 真实微透镜样本中，“平滑标准面 + 稀疏缺陷”是否足够常见？
+  \item 当前主线是否可以进入真实 pilot 验证阶段？
+  \item 如果不能，问题出在样本分布、采集流程、跨模态配准，还是方法本身？
+\end{enumerate}
+
+\section{建议的直接下一步}
+
+\begin{enumerate}
+  \item 确认两台仪器的固定参数与可导出原始文件格式
+  \item 选 3 颗 clean 微透镜作为 pilot lens set
+  \item 准备 orientation 标记与 overview 拍摄方案
+  \item 决定第一种 seeded defect 注入方式
+  \item 按 manifest 模板开始第一轮采集
+\end{enumerate}
+
+\appendix
+
+\section{配套模板路径}
+
+\begin{itemize}
+  \item \Code{/home/void0312/PINNs/mini\_grin\_rebuild/external\_data/templates/qdic\_wli\_session\_manifest.example.json}
+\end{itemize}
+
+\section{关联文档}
+
+\begin{itemize}
+  \item \Code{/home/void0312/PINNs/mini\_grin\_rebuild/docs/REAL\_DATA\_EXPERIMENT\_PLAN.md}
+  \item \Code{/home/void0312/PINNs/mini\_grin\_rebuild/docs/templates/research\_reports/EXPERIMENT\_REPORT\_TEMPLATE.tex}
+\end{itemize}
+
+\end{document}

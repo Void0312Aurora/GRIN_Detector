@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "session_id": "20260323_qdic_wli_pilot_v1",
+  "project": "mini_grin_rebuild",
+  "objective": "paired_qdic_wli_microlens_acquisition",
+  "operator": "replace_me",
+  "environment": {
+    "date": "2026-03-23",
+    "temperature_c": null,
+    "humidity_percent": null,
+    "notes": ""
+  },
+  "instruments": {
+    "qdic": {
+      "name": "replace_me",
+      "objective": "replace_me",
+      "na": null,
+      "wavelength_nm": null,
+      "pixel_pitch_um": null,
+      "fov_um": null,
+      "illumination": "replace_me",
+      "exposure_ms": null,
+      "gain": null,
+      "exported_channels": [
+        "raw_intensity",
+        "vendor_phase_if_available"
+      ]
+    },
+    "wli": {
+      "name": "replace_me",
+      "objective": "replace_me",
+      "na": null,
+      "wavelength_nm": null,
+      "pixel_pitch_um": null,
+      "fov_um": null,
+      "scan_mode": "replace_me",
+      "z_range_um": null,
+      "exported_channels": [
+        "height_map",
+        "valid_mask"
+      ]
+    }
+  },
+  "samples": [
+    {
+      "sample_id": "lens_a",
+      "lens_id": "lens_a",
+      "nominal_type": "microlens",
+      "orientation_mark": "notch_up",
+      "states": [
+        {
+          "state_id": "lens_a_clean",
+          "state": "clean",
+          "role": "standard",
+          "seeded_defect": false,
+          "notes": ""
+        },
+        {
+          "state_id": "lens_a_defect",
+          "state": "defect",
+          "role": "test",
+          "seeded_defect": true,
+          "seeded_defect_type": "particle_or_scratch_like",
+          "paired_clean_state_id": "lens_a_clean",
+          "notes": ""
+        }
+      ],
+      "acquisitions": [
+        {
+          "capture_id": "qdic_lens_a_clean_r01",
+          "modality": "qdic",
+          "state_id": "lens_a_clean",
+          "repeat_index": 1,
+          "stage_xyz": [
+            null,
+            null,
+            null
+          ],
+          "single_lens_in_fov": true,
+          "aperture_visible": true,
+          "paired_cross_modal_capture_id": "wli_lens_a_clean_r01",
+          "raw_file_paths": [
+            "external_data/raw/real/session_xxx/qdic_lens_a_clean_r01.ext"
+          ],
+          "notes": ""
+        },
+        {
+          "capture_id": "wli_lens_a_clean_r01",
+          "modality": "wli",
+          "state_id": "lens_a_clean",
+          "repeat_index": 1,
+          "stage_xyz": [
+            null,
+            null,
+            null
+          ],
+          "single_lens_in_fov": true,
+          "aperture_visible": true,
+          "paired_cross_modal_capture_id": "qdic_lens_a_clean_r01",
+          "raw_file_paths": [
+            "external_data/raw/real/session_xxx/wli_lens_a_clean_r01.ext"
+          ],
+          "notes": ""
+        },
+        {
+          "capture_id": "qdic_lens_a_defect_r01",
+          "modality": "qdic",
+          "state_id": "lens_a_defect",
+          "repeat_index": 1,
+          "stage_xyz": [
+            null,
+            null,
+            null
+          ],
+          "single_lens_in_fov": true,
+          "aperture_visible": true,
+          "paired_cross_modal_capture_id": "wli_lens_a_defect_r01",
+          "paired_clean_capture_id": "qdic_lens_a_clean_r01",
+          "raw_file_paths": [
+            "external_data/raw/real/session_xxx/qdic_lens_a_defect_r01.ext"
+          ],
+          "notes": ""
+        },
+        {
+          "capture_id": "wli_lens_a_defect_r01",
+          "modality": "wli",
+          "state_id": "lens_a_defect",
+          "repeat_index": 1,
+          "stage_xyz": [
+            null,
+            null,
+            null
+          ],
+          "single_lens_in_fov": true,
+          "aperture_visible": true,
+          "paired_cross_modal_capture_id": "qdic_lens_a_defect_r01",
+          "paired_clean_capture_id": "wli_lens_a_clean_r01",
+          "raw_file_paths": [
+            "external_data/raw/real/session_xxx/wli_lens_a_defect_r01.ext"
+          ],
+          "notes": ""
+        }
+      ],
+      "reference_strategy": {
+        "type": "computational_reference_from_wli_clean_fit",
+        "notes": "fit nominal clean lens form from WLI clean state"
+      }
+    }
+  ]
+}

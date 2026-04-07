@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "session_id": "20260323_spdic_pilot_v1",
+  "project": "mini_grin_rebuild",
+  "objective": "pilot_real_validation_for_sparse_microlens_defect_pipeline",
+  "operator": "replace_me",
+  "instrument": {
+    "name": "replace_me",
+    "objective": "replace_me",
+    "na": null,
+    "wavelength_nm": null,
+    "pixel_pitch_um": null,
+    "fov_um": null,
+    "illumination": "replace_me",
+    "exposure_ms": null,
+    "gain": null,
+    "focus_strategy": "replace_me"
+  },
+  "captures": [
+    {
+      "capture_id": "ref_0001",
+      "sample_id": "reference_artifact_a",
+      "sample_role": "reference",
+      "sample_state": "clean",
+      "paired_reference_capture_id": null,
+      "paired_standard_capture_id": null,
+      "repeat_index": 0,
+      "single_lens_in_fov": true,
+      "aperture_visible": true,
+      "raw_file_paths": [
+        "external_data/raw/real/session_xxx/ref_0001.ext"
+      ],
+      "notes": ""
+    },
+    {
+      "capture_id": "std_0001",
+      "sample_id": "lens_a",
+      "sample_role": "standard",
+      "sample_state": "clean",
+      "paired_reference_capture_id": "ref_0001",
+      "paired_standard_capture_id": null,
+      "repeat_index": 0,
+      "single_lens_in_fov": true,
+      "aperture_visible": true,
+      "raw_file_paths": [
+        "external_data/raw/real/session_xxx/std_0001.ext"
+      ],
+      "notes": ""
+    },
+    {
+      "capture_id": "test_0001",
+      "sample_id": "lens_a",
+      "sample_role": "test",
+      "sample_state": "defect_seeded",
+      "paired_reference_capture_id": "ref_0001",
+      "paired_standard_capture_id": "std_0001",
+      "repeat_index": 0,
+      "single_lens_in_fov": true,
+      "aperture_visible": true,
+      "raw_file_paths": [
+        "external_data/raw/real/session_xxx/test_0001.ext"
+      ],
+      "notes": "seeded_defect_type=scratch_like"
+    }
+  ]
+}

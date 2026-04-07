@@ -1,0 +1,20 @@
+{
+  "name": "daks_33",
+  "title": "Three-Dimensional Transfer Functions of Interference Microscopes",
+  "source": "https://doi.org/10.48662/daks-33",
+  "license_note": "CC BY 4.0 (per report)",
+  "note": "Recommended for later because it exposes raw interference measurements, but the direct download path still needs a stable resolver.",
+  "intended_use": "future_physics_calibration",
+  "archive": {
+    "configured": false
+  },
+  "processed": {
+    "root": "/home/void0312/PINNs/mini_grin_rebuild/external_data/processed/daks_33",
+    "exists": false,
+    "file_count": 0,
+    "total_bytes": 0,
+    "suffix_counts": {},
+    "top_level_entries": [],
+    "sample_files": []
+  }
+}

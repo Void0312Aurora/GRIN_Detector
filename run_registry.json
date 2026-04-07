@@ -1,0 +1,55 @@
+{
+  "default_status": "archive_candidate",
+  "statuses": {
+    "active": "Current baseline or result that should stay easy to find during ongoing research.",
+    "reference": "Historical run that is still useful for comparison, report reproduction, or QC.",
+    "archive_candidate": "Historical exploratory run. Keep the original path stable for now, but treat it as archived by default."
+  },
+  "runs": {
+    "20260123_145017_87d0b039_20x_ood_suite_v1": {
+      "status": "reference",
+      "alias": "ood_suite_v1",
+      "note": "Pre-taper 20x OOD baseline; kept for comparison against taper."
+    },
+    "20260123_165204_11172324_20x_ood_suite_taper_v1": {
+      "status": "active",
+      "alias": "ood_suite_taper_v1",
+      "note": "20x OOD suite with taper variant."
+    },
+    "20260122_193357_f9f5d803_pre_real_validation_best": {
+      "status": "reference",
+      "alias": "pre_real_best",
+      "note": "Older pre-real validation checkpoint; v2 is the live successor."
+    },
+    "20260122_194443_3af24edd_pre_real_validation_best_v2": {
+      "status": "active",
+      "alias": "pre_real_best_v2",
+      "note": "Updated pre-real validation checkpoint."
+    },
+    "20260122_132018_4c5bb1b1_qc_eval_best": {
+      "status": "active",
+      "alias": "qc_eval_best",
+      "note": "Primary QC evaluation summary."
+    },
+    "20260122_120109_bfeede16_gate_microlens_srt_q99": {
+      "status": "reference",
+      "alias": "gate_srt_q99",
+      "note": "GT-free gating reference with q=0.99."
+    },
+    "20260122_130505_bd1592bc_suite_optimize_edge_v1_gated_q99": {
+      "status": "reference",
+      "alias": "suite_opt_edge_gated_q99",
+      "note": "Edge optimization suite root."
+    },
+    "20260122_131349_08bf608f_suite_optimize_gate_q99_v1_gated_q99_v1": {
+      "status": "reference",
+      "alias": "suite_opt_gate_q99_v1",
+      "note": "Gate optimization suite root."
+    },
+    "20260121_232000_eb006e63_suite_ablation_signless_v1_microlens_srt_report": {
+      "status": "reference",
+      "alias": "ablation_signless_report",
+      "note": "Microlens SRT ablation report root."
+    }
+  }
+}

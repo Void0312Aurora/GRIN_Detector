@@ -1,0 +1,40 @@
+{
+  "path": "/home/void0312/PINNs/mini_grin_rebuild/external_data/raw/zenodo_18014400_subset/Data_File_3.txt",
+  "size_bytes": 393364,
+  "suffix": ".txt",
+  "md5": "6d7720c5b81edf63fe18a661878dff01",
+  "kind": "tabular_text",
+  "header": [
+    "Filename",
+    "Scratch number",
+    "Average_CoF_per_cycle"
+  ],
+  "row_count_excluding_header": 9600,
+  "sample_rows": [
+    [
+      "CoF_S01_90_1N.txt",
+      "1",
+      "0.1479735302186791"
+    ],
+    [
+      "CoF_S01_90_1N.txt",
+      "2",
+      "0.14553723185213677"
+    ],
+    [
+      "CoF_S01_90_1N.txt",
+      "3",
+      "0.14375852661685753"
+    ],
+    [
+      "CoF_S01_90_1N.txt",
+      "4",
+      "0.14085739412443257"
+    ],
+    [
+      "CoF_S01_90_1N.txt",
+      "5",
+      "0.14961240082635952"
+    ]
+  ]
+}

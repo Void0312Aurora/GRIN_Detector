@@ -1,0 +1,25 @@
+{
+  "name": "zenodo_10365872",
+  "title": "CSI/FV/Confocal topography comparison",
+  "source": "https://zenodo.org/records/10365872",
+  "license_note": "CC BY 4.0",
+  "note": "Small topography dataset for quick height-to-SPDIC pipeline validation.",
+  "intended_use": "first_import_smoke",
+  "archive": {
+    "configured": true,
+    "exists": true,
+    "path": "/home/void0312/PINNs/mini_grin_rebuild/external_data/raw/zenodo_10365872/10365872.zip",
+    "size_bytes": 21315584,
+    "is_zip_valid": false,
+    "error": "bad_zip_or_incomplete_download"
+  },
+  "processed": {
+    "root": "/home/void0312/PINNs/mini_grin_rebuild/external_data/processed/zenodo_10365872",
+    "exists": false,
+    "file_count": 0,
+    "total_bytes": 0,
+    "suffix_counts": {},
+    "top_level_entries": [],
+    "sample_files": []
+  }
+}

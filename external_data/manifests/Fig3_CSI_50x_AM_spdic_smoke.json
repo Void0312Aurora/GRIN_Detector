@@ -1,0 +1,66 @@
+{
+  "height_stats_um": {
+    "max": 17.650203704833984,
+    "mean": 0.08681827783584595,
+    "min": -34.330284118652344,
+    "p01": -17.01881980895996,
+    "p99": 16.00497817993164,
+    "std": 6.916135787963867
+  },
+  "input_path": "/home/void0312/PINNs/mini_grin_rebuild/external_data/raw/zenodo_10365872_subset/Fig3_CSI_50x_AM.plux",
+  "intensity_stats": {
+    "I_x": {
+      "max": 567504.5625,
+      "mean": 255.73338317871094,
+      "min": 0.0,
+      "p01": 0.00026661722222343087,
+      "p99": 1590.5982666015625,
+      "std": 4359.0205078125
+    },
+    "I_y": {
+      "max": 654969.75,
+      "mean": 143.04273986816406,
+      "min": 0.0,
+      "p01": 0.0001482351653976366,
+      "p99": 470.06866455078125,
+      "std": 2888.953125
+    }
+  },
+  "manifest_path": "/home/void0312/PINNs/mini_grin_rebuild/external_data/manifests/Fig3_CSI_50x_AM_spdic_smoke.json",
+  "metadata": {
+    "algorithm": "CSI",
+    "fov_unit_assumed": "mm",
+    "fov_x_raw": 0.2759999930858612,
+    "fov_x_um": 275.9999930858612,
+    "fov_y_raw": 0.2759999930858612,
+    "fov_y_um": 275.9999930858612,
+    "image_size_x": 1224,
+    "image_size_y": 1024,
+    "instrument_manufacturer": "Sensofar",
+    "instrument_model": "S neox 090",
+    "measure_type": "Topography",
+    "measured_fraction": 0.978,
+    "pixel_pitch_x_um": 0.22549019042962518,
+    "pixel_pitch_y_um": 0.26953124324791133,
+    "raw_member": "LAYER_0.raw",
+    "source_path": "/home/void0312/PINNs/mini_grin_rebuild/external_data/raw/zenodo_10365872_subset/Fig3_CSI_50x_AM.plux",
+    "technique": "Interferometric"
+  },
+  "output_dir": "/home/void0312/PINNs/mini_grin_rebuild/external_data/processed/zenodo_10365872_subset/Fig3_CSI_50x_AM_spdic_smoke",
+  "phase_stats_rad": {
+    "max": 91.13106536865234,
+    "mean": 0.4482574462890625,
+    "min": -177.2532196044922,
+    "p01": -87.87112426757812,
+    "p99": 82.63648986816406,
+    "std": 35.70920944213867
+  },
+  "preprocess": {
+    "center_height": true,
+    "detrend_plane": true,
+    "fill_missing": true,
+    "height_scale": 1.0,
+    "missing_pixels": 27479,
+    "valid_fraction": 0.9780760123059641
+  }
+}

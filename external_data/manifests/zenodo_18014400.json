@@ -1,0 +1,25 @@
+{
+  "name": "zenodo_18014400",
+  "title": "Micro-milled textures and friction topography",
+  "source": "https://zenodo.org/records/18014400",
+  "license_note": "CC BY 4.0",
+  "note": "Texture-heavy surface dataset for hybrid defect/background priors.",
+  "intended_use": "texture_library",
+  "archive": {
+    "configured": true,
+    "exists": true,
+    "path": "/home/void0312/PINNs/mini_grin_rebuild/external_data/raw/zenodo_18014400/18014400.zip",
+    "size_bytes": 23736320,
+    "is_zip_valid": false,
+    "error": "bad_zip_or_incomplete_download"
+  },
+  "processed": {
+    "root": "/home/void0312/PINNs/mini_grin_rebuild/external_data/processed/zenodo_18014400",
+    "exists": false,
+    "file_count": 0,
+    "total_bytes": 0,
+    "suffix_counts": {},
+    "top_level_entries": [],
+    "sample_files": []
+  }
+}

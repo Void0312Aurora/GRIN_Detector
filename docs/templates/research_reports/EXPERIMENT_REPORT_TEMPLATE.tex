@@ -1,0 +1,423 @@
+\documentclass[UTF8,a4paper,11pt]{ctexart}
+
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{siunitx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!50!black,
+  citecolor=blue!50!black
+}
+
+\captionsetup{font=small,labelfont=bf}
+\setlist[itemize]{leftmargin=1.8em}
+\setlist[enumerate]{leftmargin=2.0em}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.4em}
+\setlength{\headheight}{14pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{mini\_grin\_rebuild 实验报告}
+\rhead{\today}
+\cfoot{\thepage/\pageref{LastPage}}
+
+% ---------- Metadata ----------
+\newcommand{\ReportTitle}{实验标题待填写}
+\newcommand{\ReportID}{EXP-YYYYMMDD-001}
+\newcommand{\AuthorName}{姓名待填写}
+\newcommand{\ReportDate}{\today}
+\newcommand{\ExperimentStatus}{进行中 / 已完成 / 已终止}
+
+\newcommand{\ProblemStatement}{%
+请在此处用 2--4 句话概括实验问题，例如：\\
+在当前微透镜缺陷重建主线上，验证某个假设、某个数据分布变化、某个真实实验采集设置，
+是否会影响 pseudo-poisson + residual 模型的稳定性、QC 门控行为和泛化能力。%
+}
+
+\newcommand{\KeyHypothesis}{%
+H1: 稀疏小缺陷假设在该实验设置下仍然成立。\\
+H2: \Code{standard -> test} 的差分仍足以驱动 signless / pseudo-poisson 残差学习。%
+}
+
+\newcommand{\DataSummary}{%
+数据来源待填写，例如：synthetic / real pilot / hybrid。\\
+若是真实实验，明确说明是否存在 `reference / standard / test` 配对。%
+}
+
+\newcommand{\PrimaryRunPaths}{%
+\begin{itemize}
+  \item run 路径 1：\texttt{/abs/path/to/run\_a}
+  \item run 路径 2：\texttt{/abs/path/to/run\_b}
+\end{itemize}
+}
+
+\newcommand{\PrimaryConfigPaths}{%
+\begin{itemize}
+  \item 配置 1：\texttt{/abs/path/to/config\_a.json}
+  \item 配置 2：\texttt{/abs/path/to/config\_b.json}
+\end{itemize}
+}
+
+\newcommand{\HardwareSummary}{%
+\begin{itemize}
+  \item 机器 / GPU：待填写
+  \item 环境：\texttt{conda env / python version}
+  \item 代码版本：git commit 待填写
+\end{itemize}
+}
+
+\newcommand{\InstrumentSummary}{%
+\begin{itemize}
+  \item 若为仿真实验：可写 ``N/A''
+  \item 若为真实实验：仪器型号、物镜、NA、波长、像素尺寸、曝光、增益、照明方式
+\end{itemize}
+}
+
+% ---------- Convenience ----------
+\newcommand{\TODO}[1]{\textcolor{red!70!black}{[TODO: #1]}}
+\newcommand{\GOOD}[1]{\textcolor{green!40!black}{#1}}
+\newcommand{\RISK}[1]{\textcolor{red!60!black}{#1}}
+\newcommand{\Code}[1]{\texttt{#1}}
+\newcommand{\PlaceholderGraphic}[1]{%
+  \fbox{%
+    \parbox[c][0.26\textheight][c]{0.9\linewidth}{%
+      \centering
+      \textbf{占位图}\\[0.6em]
+      \texttt{\detokenize{#1}}\\[0.6em]
+      请将真实实验输出图放到该路径
+    }%
+  }%
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  {\LARGE \bfseries \ReportTitle \par}
+  \vspace{1.2em}
+  {\large mini\_grin\_rebuild 实验报告模板 \par}
+  \vspace{2em}
+
+  \begin{tabular}{>{\bfseries}p{0.24\textwidth} p{0.66\textwidth}}
+    报告编号 & \ReportID \\
+    作者 & \AuthorName \\
+    日期 & \ReportDate \\
+    状态 & \ExperimentStatus \\
+  \end{tabular}
+
+  \vfill
+
+  \begin{minipage}{0.92\textwidth}
+    \textbf{实验问题} \\
+    \ProblemStatement
+  \end{minipage}
+
+  \vspace{1.2em}
+
+  \begin{minipage}{0.92\textwidth}
+    \textbf{关键假设} \\
+    \KeyHypothesis
+  \end{minipage}
+
+  \vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{执行摘要}
+
+\subsection{一句话结论}
+\TODO{用 1 句话写清这次实验最重要的结论。}
+
+\subsection{主要发现}
+\begin{itemize}
+  \item \TODO{发现 1}
+  \item \TODO{发现 2}
+  \item \TODO{发现 3}
+\end{itemize}
+
+\subsection{当前判断}
+\TODO{写清这次实验对主线的意义：支持当前路线、否定某个假设、还是暴露了某个新的工程瓶颈。}
+
+\section{背景与问题定义}
+
+\subsection{主线位置}
+建议交代这次实验处于哪条主线之下，例如：
+\begin{itemize}
+  \item baseline 冻结后的验证
+  \item OOD / pre-real / QC / real pilot
+  \item 稀疏性假设或 sign 假设压力测试
+\end{itemize}
+
+\subsection{本次实验要回答的问题}
+\begin{enumerate}
+  \item \TODO{问题 1}
+  \item \TODO{问题 2}
+  \item \TODO{问题 3}
+\end{enumerate}
+
+\subsection{验收标准}
+\begin{itemize}
+  \item 定量指标：\TODO{例如 global\_rmse、defect\_f1、physics\_rmse、qc\_pass\_rate}
+  \item 定性指标：\TODO{例如边缘伪影、缺陷局部化、失败模式是否可解释}
+  \item 决策阈值：\TODO{例如是否进入下一轮真实实验 / 是否冻结当前 baseline}
+\end{itemize}
+
+\section{实验对象与假设}
+
+\subsection{任务定义}
+\TODO{明确输入、输出、评价对象、是否依赖 reference/standard/test。}
+
+\subsection{模型或基线假设}
+建议至少覆盖：
+\begin{itemize}
+  \item 稀疏小缺陷假设
+  \item 微透镜标准面平滑且可稳定建模
+  \item `pseudo-poisson` 分支所需的符号一致性近似
+  \item 真实或合成数据中 aperture / edge 的可识别性
+\end{itemize}
+
+\subsection{可能失效点}
+\begin{itemize}
+  \item \TODO{失效点 1}
+  \item \TODO{失效点 2}
+  \item \TODO{失效点 3}
+\end{itemize}
+
+\section{数据与样本说明}
+
+\subsection{数据摘要}
+\DataSummary
+
+\subsection{数据版本与路径}
+\PrimaryConfigPaths
+\PrimaryRunPaths
+
+\subsection{数据构成}
+\begin{longtable}{p{0.18\textwidth} p{0.18\textwidth} p{0.16\textwidth} p{0.36\textwidth}}
+\toprule
+样本组 & 样本数 & 角色 & 说明 \\
+\midrule
+\endfirsthead
+\toprule
+样本组 & 样本数 & 角色 & 说明 \\
+\midrule
+\endhead
+clean repeat & \TODO{n} & standard / repeat & \TODO{说明} \\
+paired defect & \TODO{n} & standard + test & \TODO{说明} \\
+reference & \TODO{n} & reference & \TODO{说明} \\
+\bottomrule
+\end{longtable}
+
+\subsection{若为真实实验：采集条件}
+\InstrumentSummary
+
+\subsection{若为真实实验：元数据与配对规则}
+\begin{itemize}
+  \item 元数据 manifest：\Code{external\_data/templates/real\_capture\_manifest.example.json}
+  \item 是否存在 \Code{reference / standard / test}：\TODO{填写}
+  \item 重复采集次数：\TODO{填写}
+  \item 视场限制：\TODO{单 lens / aperture 完整 / 对准条件}
+\end{itemize}
+
+\section{方法与配置}
+
+\subsection{模型 / 基线}
+\begin{itemize}
+  \item 主模型：\TODO{例如 pseudo-poisson prior + UNet++ residual}
+  \item 对照基线：\TODO{例如 pseudo-poisson / oracle / ablation}
+\end{itemize}
+
+\subsection{关键配置}
+\begin{longtable}{p{0.34\textwidth} p{0.18\textwidth} p{0.38\textwidth}}
+\toprule
+参数 & 数值 & 说明 \\
+\midrule
+\endfirsthead
+\toprule
+参数 & 数值 & 说明 \\
+\midrule
+\endhead
+\Code{scene} & \TODO{} & \TODO{} \\
+\Code{grid\_size} & \TODO{} & \TODO{} \\
+\Code{dx} & \TODO{} & \TODO{} \\
+\Code{use\_pseudo\_poisson\_prior} & \TODO{} & \TODO{} \\
+\Code{pseudo\_poisson\_prior\_as\_input} & \TODO{} & \TODO{} \\
+\Code{pseudo\_poisson\_residual\_scale} & \TODO{} & \TODO{} \\
+\Code{use\_phase\_inputs} & \TODO{} & \TODO{} \\
+\Code{crop\_size} & \TODO{} & \TODO{} \\
+\Code{model\_padding\_mode} & \TODO{} & \TODO{} \\
+\bottomrule
+\end{longtable}
+
+\subsection{运行环境}
+\HardwareSummary
+
+\subsection{执行命令}
+\begin{verbatim}
+# 在这里记录真实执行过的命令
+conda run -n PINNs bash -lc 'cd /abs/path/to/mini_grin_rebuild && ...'
+\end{verbatim}
+
+\section{指标与报告规范}
+
+\subsection{主指标}
+\begin{itemize}
+  \item \TODO{例如 defect\_rmse / defect\_f1 / global\_rmse}
+  \item \TODO{明确统计对象与 split}
+\end{itemize}
+
+\subsection{QC / Gating 指标}
+\begin{itemize}
+  \item \Code{physics\_rmse}
+  \item \Code{physics\_p95\_abs}
+  \item \Code{edge\_mean\_abs}
+  \item \Code{edge\_p95\_abs}
+  \item \Code{outside\_mean\_abs}
+  \item \Code{outside\_p95\_abs}
+\end{itemize}
+
+\subsection{判定规则}
+\TODO{写清 pass/fail 的依据，以及本次实验是否采用固定阈值或重新校准的 q99 阈值。}
+
+\section{结果}
+
+\subsection{定量结果总表}
+\begin{longtable}{p{0.22\textwidth} *{5}{>{\centering\arraybackslash}p{0.13\textwidth}}}
+\toprule
+方法 / 实验组 & 指标 1 & 指标 2 & 指标 3 & QC 通过率 & 备注 \\
+\midrule
+\endfirsthead
+\toprule
+方法 / 实验组 & 指标 1 & 指标 2 & 指标 3 & QC 通过率 & 备注 \\
+\midrule
+\endhead
+baseline & \TODO{} & \TODO{} & \TODO{} & \TODO{} & \TODO{} \\
+method A & \TODO{} & \TODO{} & \TODO{} & \TODO{} & \TODO{} \\
+method B & \TODO{} & \TODO{} & \TODO{} & \TODO{} & \TODO{} \\
+\bottomrule
+\end{longtable}
+
+\subsection{关键图像}
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.47\textwidth}
+    \centering
+    \IfFileExists{figures/example_result_1.png}{%
+      \includegraphics[width=\textwidth]{figures/example_result_1.png}%
+    }{%
+      \PlaceholderGraphic{figures/example_result_1.png}%
+    }
+    \caption{示例 1}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.47\textwidth}
+    \centering
+    \IfFileExists{figures/example_result_2.png}{%
+      \includegraphics[width=\textwidth]{figures/example_result_2.png}%
+    }{%
+      \PlaceholderGraphic{figures/example_result_2.png}%
+    }
+    \caption{示例 2}
+  \end{subfigure}
+  \caption{建议展示：标准面、预测缺陷、残差、失败案例或 QC 异常样本。}
+\end{figure}
+
+\subsection{现象解释}
+\begin{itemize}
+  \item \TODO{最关键现象 1}
+  \item \TODO{最关键现象 2}
+  \item \TODO{最关键现象 3}
+\end{itemize}
+
+\section{失败案例与风险}
+
+\subsection{失败样本归类}
+\begin{itemize}
+  \item 边缘伪影主导
+  \item aperture 检测失败
+  \item 非稀疏表面纹理导致方法失效
+  \item reference / standard / test 不可配对
+  \item 真实采集漂移过大
+\end{itemize}
+
+\subsection{未解决问题}
+\begin{itemize}
+  \item \TODO{问题 1}
+  \item \TODO{问题 2}
+  \item \TODO{问题 3}
+\end{itemize}
+
+\subsection{对结论的威胁}
+\begin{itemize}
+  \item 样本量是否过小
+  \item 是否只在单一 seed / 单一 session / 单一设备上成立
+  \item 是否存在 selection bias
+\end{itemize}
+
+\section{结论与下一步}
+
+\subsection{本次结论}
+\TODO{用 3--6 句话给出收敛结论，不要重复全文。}
+
+\subsection{是否进入下一阶段}
+\begin{itemize}
+  \item [ ] 可以扩大实验规模
+  \item [ ] 需要先补真实数据采集
+  \item [ ] 需要先修改模型假设
+  \item [ ] 需要先补 QC / 数据预处理
+\end{itemize}
+
+\subsection{下一步动作}
+\begin{enumerate}
+  \item \TODO{动作 1}
+  \item \TODO{动作 2}
+  \item \TODO{动作 3}
+\end{enumerate}
+
+\appendix
+
+\section{附录 A：实验清单}
+
+\begin{longtable}{p{0.18\textwidth} p{0.72\textwidth}}
+\toprule
+项目 & 内容 \\
+\midrule
+\endfirsthead
+\toprule
+项目 & 内容 \\
+\midrule
+\endhead
+代码版本 & \TODO{git commit} \\
+数据版本 & \TODO{dataset hash / manifest id} \\
+运行命令 & \TODO{命令全文} \\
+关键路径 & \TODO{runs / configs / outputs} \\
+环境快照 & \TODO{conda / python / torch / cuda} \\
+\bottomrule
+\end{longtable}
+
+\section{附录 B：图表替换说明}
+
+将下面这些占位图替换成你真实的输出：
+\begin{itemize}
+  \item \Code{figures/example\_result\_1.png}
+  \item \Code{figures/example\_result\_2.png}
+\end{itemize}
+
+\end{document}

@@ -3,12 +3,25 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.gitignore
 
 # local datasets & run artifacts
 data/
 runs/
+runs_refs/
+runs_archive/
 outputs/
+external_data/raw/
+external_data/processed/
 *.npz
 *.pt
 *.pth
 
+# LaTeX build artifacts
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.xdv

@@ -1,0 +1,345 @@
+\documentclass[UTF8,a4paper,11pt]{ctexart}
+
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{siunitx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!50!black
+}
+
+\captionsetup{font=small,labelfont=bf}
+\setlist[itemize]{leftmargin=1.8em}
+\setlist[enumerate]{leftmargin=2.0em}
+\setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\setlength{\headheight}{14pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{qDIC + WLI 标准实验报告模板}
+\rhead{\today}
+\cfoot{\thepage/\pageref{LastPage}}
+
+\newcommand{\Code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\TODO}[1]{\textcolor{red!70!black}{[TODO: #1]}}
+
+% ---------- Metadata ----------
+\newcommand{\ExperimentTitle}{qDIC + 白光干涉仪微透镜联合采集实验}
+\newcommand{\ExperimentDate}{\today}
+\newcommand{\ExperimentLocation}{实验地点待填写}
+\newcommand{\Experimenter}{实验者待填写}
+\newcommand{\Partner}{同组人员待填写}
+\newcommand{\InstrumentA}{qDIC / 定量微分相衬显微镜}
+\newcommand{\InstrumentB}{WLI / 白光干涉仪}
+\newcommand{\SampleName}{微透镜样品待填写}
+\newcommand{\ReportID}{LAB-YYYYMMDD-001}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE \bfseries 标准实验报告}\\[1.0em]
+  {\Large \bfseries \ExperimentTitle}\\[1.5em]
+\end{center}
+
+\begin{longtable}{>{\bfseries}p{0.22\textwidth} p{0.70\textwidth}}
+\toprule
+项目 & 内容 \\
+\midrule
+\endfirsthead
+\toprule
+项目 & 内容 \\
+\midrule
+\endhead
+实验编号 & \ReportID \\
+实验日期 & \ExperimentDate \\
+实验地点 & \ExperimentLocation \\
+实验者 & \Experimenter \\
+同组人员 & \Partner \\
+主要仪器 & \InstrumentA；\InstrumentB \\
+实验样品 & \SampleName \\
+\bottomrule
+\end{longtable}
+
+\tableofcontents
+\newpage
+
+\section{实验标题}
+
+\ExperimentTitle
+
+\section{实验目的}
+
+\begin{enumerate}
+  \item 通过 qDIC 采集微透镜在 \Code{clean / defect} 状态下的真实观测数据。
+  \item 通过 WLI 获取同一颗微透镜的三维形貌，用作几何参考。
+  \item 建立同一颗微透镜在两种状态下的 qDIC 与 WLI 跨模态配对关系。
+  \item 验证真实样本是否满足当前方法所依赖的“平滑标准面 + 稀疏小缺陷”假设。
+  \item 为后续真实数据验证、QC 门控以及算法适配提供基础实验数据。
+\end{enumerate}
+
+\section{实验原理}
+
+\subsection{qDIC 原理}
+
+qDIC 通过相位梯度或光程差引起的强度变化形成对比，可用于观察微透镜表面局部结构、边缘变化和缺陷引起的微小扰动。
+在本实验中，qDIC 作为主观测模态，对应后续算法处理的真实输入。
+
+\subsection{WLI 原理}
+
+白光干涉仪通过干涉扫描获取样品表面的三维高度信息，可给出计量级表面形貌。
+在本实验中，WLI 作为几何参考模态，用于：
+\begin{itemize}
+  \item 建立 clean 状态下的标准面
+  \item 提取 defect 状态相对 clean 状态的残差形貌
+  \item 判断真实样本是否符合稀疏缺陷假设
+\end{itemize}
+
+\subsection{联合实验原理}
+
+对同一颗微透镜，分别在 qDIC 和 WLI 下采集 \Code{clean} 与 \Code{defect} 两种状态的数据。
+通过跨模态配对，将 qDIC 的真实观测与 WLI 的几何参考对应起来，从而实现：
+\begin{itemize}
+  \item 真实输入与几何参考的联合分析
+  \item clean / defect 状态差异的局部化解释
+  \item 对当前主线假设的直接验证
+\end{itemize}
+
+\section{实验仪器与材料}
+
+\subsection{实验仪器}
+
+\begin{longtable}{>{\bfseries}p{0.26\textwidth} p{0.22\textwidth} p{0.42\textwidth}}
+\toprule
+仪器名称 & 型号/规格 & 备注 \\
+\midrule
+\endfirsthead
+\toprule
+仪器名称 & 型号/规格 & 备注 \\
+\midrule
+\endhead
+qDIC 显微镜 & \TODO{填写} & 主观测模态 \\
+WLI 白光干涉仪 & \TODO{填写} & 三维形貌参考 \\
+物镜 & \TODO{填写} & 倍率、NA \\
+样品台 / 载台 & \TODO{填写} & 建议可记录 stage 坐标 \\
+数据采集工作站 & \TODO{填写} & 记录软件版本与导出格式 \\
+\bottomrule
+\end{longtable}
+
+\subsection{实验材料}
+
+\begin{itemize}
+  \item 微透镜样品：\TODO{填写样品编号、批次、数量}
+  \item 若进行缺陷注入：\TODO{填写注入材料或工具，例如微粒、附着物、划痕工具}
+  \item 辅助定位材料：\TODO{方向标记、fiducial、样品编号标签等}
+\end{itemize}
+
+\section{实验步骤}
+
+\subsection{实验前准备}
+
+\begin{enumerate}
+  \item 检查 qDIC 与 WLI 两台仪器状态，完成开机与预热。
+  \item 完成 qDIC 的平场、暗场或参考件校准。
+  \item 完成 WLI 的当天标定与参考检查。
+  \item 确定样品方向标记、样品编号和 overview 成像方案。
+  \item 记录当天环境条件、仪器参数、操作者和软件版本。
+\end{enumerate}
+
+\subsection{clean 状态采集}
+
+\begin{enumerate}
+  \item 固定样品方向，在低倍视场下确定目标微透镜位置。
+  \item 切换到目标视场，保证视场中仅包含一颗微透镜且 aperture 完整。
+  \item 对 clean 状态样品进行 qDIC 重复采集，记录 repeat 编号与 stage 坐标。
+  \item 对同一颗 clean 微透镜进行 WLI 扫描，保存高度图与有效 mask。
+\end{enumerate}
+
+\subsection{缺陷注入与 defect 状态采集}
+
+\begin{enumerate}
+  \item 对目标样品引入可控缺陷，记录缺陷类型、位置、方式和是否可逆。
+  \item 返回同一颗微透镜，重新对齐视场。
+  \item 对 defect 状态进行 qDIC 重复采集。
+  \item 对同一颗 defect 微透镜进行 WLI 扫描。
+\end{enumerate}
+
+\subsection{实验后检查}
+
+\begin{enumerate}
+  \item 检查 qDIC 和 WLI 原始文件是否完整且可读。
+  \item 检查 clean / defect 标记是否一致。
+  \item 检查同一颗 lens 在 qDIC 与 WLI 中是否成功配对。
+  \item 检查 clean WLI residual 是否显著小于 defect residual。
+\end{enumerate}
+
+\section{数据记录}
+
+\subsection{实验条件记录表}
+
+\begin{longtable}{>{\bfseries}p{0.24\textwidth} p{0.30\textwidth} p{0.30\textwidth}}
+\toprule
+参数 & qDIC & WLI \\
+\midrule
+\endfirsthead
+\toprule
+参数 & qDIC & WLI \\
+\midrule
+\endhead
+仪器型号 & \TODO{填写} & \TODO{填写} \\
+物镜倍率 & \TODO{填写} & \TODO{填写} \\
+NA & \TODO{填写} & \TODO{填写} \\
+波长 / 光源 & \TODO{填写} & \TODO{填写} \\
+像素尺寸 / lateral sampling & \TODO{填写} & \TODO{填写} \\
+FOV & \TODO{填写} & \TODO{填写} \\
+曝光时间 & \TODO{填写} & \TODO{填写} \\
+增益 & \TODO{填写} & \TODO{填写} \\
+扫描范围 / z range & \TODO{若适用} & \TODO{填写} \\
+\bottomrule
+\end{longtable}
+
+\subsection{样本采集记录表}
+
+\begin{longtable}{>{\bfseries}p{0.14\textwidth} p{0.10\textwidth} p{0.10\textwidth} p{0.10\textwidth} p{0.14\textwidth} p{0.26\textwidth}}
+\toprule
+样品编号 & 状态 & 模态 & 重复号 & 配对样本 & 原始文件路径 / 备注 \\
+\midrule
+\endfirsthead
+\toprule
+样品编号 & 状态 & 模态 & 重复号 & 配对样本 & 原始文件路径 / 备注 \\
+\midrule
+\endhead
+\TODO{lens\_a} & clean & qDIC & 1 & \TODO{wli\_lens\_a\_clean\_r01} & \TODO{填写} \\
+\TODO{lens\_a} & clean & WLI & 1 & \TODO{qdic\_lens\_a\_clean\_r01} & \TODO{填写} \\
+\TODO{lens\_a} & defect & qDIC & 1 & \TODO{wli\_lens\_a\_defect\_r01} & \TODO{填写} \\
+\TODO{lens\_a} & defect & WLI & 1 & \TODO{qdic\_lens\_a\_defect\_r01} & \TODO{填写} \\
+\bottomrule
+\end{longtable}
+
+\subsection{元数据文件}
+
+推荐同时保留结构化 manifest：
+\begin{itemize}
+  \item \Code{/home/void0312/PINNs/mini_grin_rebuild/external_data/templates/qdic_wli_session_manifest.example.json}
+\end{itemize}
+
+\section{数据处理}
+
+\subsection{qDIC 数据处理}
+
+\begin{enumerate}
+  \item 导入原始 qDIC 数据。
+  \item 做必要的平场、暗场、强度归一化与坏点处理。
+  \item 选择单颗微透镜视场，裁剪有效 aperture 区域。
+  \item 对 clean / defect 配对样本进行差分或重复性分析。
+\end{enumerate}
+
+\subsection{WLI 数据处理}
+
+\begin{enumerate}
+  \item 导入 WLI 高度图和有效 mask。
+  \item 去除 tilt / piston / form。
+  \item 对 clean 状态拟合标准面。
+  \item 计算 defect 状态相对 clean 标准面的残差形貌。
+\end{enumerate}
+
+\subsection{跨模态处理}
+
+\begin{enumerate}
+  \item 建立 qDIC 与 WLI 的 lens identity 对应关系。
+  \item 依据 stage 坐标、方向标记、overview 图完成跨模态配对。
+  \item 统一 clean / defect 状态定义与文件命名。
+  \item 输出后续算法可用的配对数据单元。
+\end{enumerate}
+
+\section{结果与数据分析}
+
+\subsection{重复性分析}
+
+\TODO{记录 clean 状态下 qDIC 重复采集与 WLI 重复扫描的一致性结果。}
+
+\subsection{标准面与缺陷残差分析}
+
+\TODO{写明 clean WLI 标准面拟合结果，以及 defect 相对 clean 的残差是否局部且稀疏。}
+
+\subsection{跨模态配对结果}
+
+\TODO{写明 qDIC 与 WLI 是否成功完成同一颗 lens 的 clean / defect 配对。}
+
+\subsection{数据处理结果表}
+
+\begin{longtable}{>{\bfseries}p{0.16\textwidth} p{0.18\textwidth} p{0.18\textwidth} p{0.18\textwidth} p{0.20\textwidth}}
+\toprule
+样品编号 & qDIC 重复性 & WLI 重复性 & 缺陷残差特征 & 是否满足主线假设 \\
+\midrule
+\endfirsthead
+\toprule
+样品编号 & qDIC 重复性 & WLI 重复性 & 缺陷残差特征 & 是否满足主线假设 \\
+\midrule
+\endhead
+\TODO{lens\_a} & \TODO{填写} & \TODO{填写} & \TODO{填写} & \TODO{是/否} \\
+\TODO{lens\_b} & \TODO{填写} & \TODO{填写} & \TODO{填写} & \TODO{是/否} \\
+\bottomrule
+\end{longtable}
+
+\section{误差分析}
+
+建议从以下几类误差展开：
+
+\begin{enumerate}
+  \item \textbf{仪器误差}：qDIC 光路漂移、WLI 标定误差、焦点或扫描不稳定。
+  \item \textbf{定位误差}：两台仪器下未能精确回到同一颗微透镜。
+  \item \textbf{样品误差}：样品方向变化、污染扩散、缺陷注入不可控。
+  \item \textbf{处理误差}：去 tilt / 去 form 过强或不足，导致残差被放大或掩盖。
+  \item \textbf{配对误差}：clean / defect 或 qDIC / WLI 文件命名、编号、状态对应错误。
+\end{enumerate}
+
+\TODO{在此补充本次实验实际观察到的主要误差来源。}
+
+\section{问题讨论}
+
+建议围绕以下问题展开：
+
+\begin{enumerate}
+  \item qDIC 与 WLI 是否足以构成稳定的同 lens 配对实验？
+  \item 真实微透镜是否普遍满足“平滑标准面 + 稀疏小缺陷”假设？
+  \item 哪类样本明显超出当前方法适用范围？
+  \item 当前实验流程中最薄弱的环节是采集、配准、还是缺陷注入？
+  \item 下一轮应优先扩大样本量，还是先优化实验流程？
+\end{enumerate}
+
+\section{实验结论}
+
+\TODO{用 3--6 句话总结实验结论。}
+
+\section{附录}
+
+\subsection{附录 A：原始文件与路径}
+
+\begin{itemize}
+  \item qDIC 原始文件目录：\TODO{填写}
+  \item WLI 原始文件目录：\TODO{填写}
+  \item manifest 文件路径：\TODO{填写}
+\end{itemize}
+
+\subsection{附录 B：后续建议}
+
+\begin{enumerate}
+  \item \TODO{建议 1}
+  \item \TODO{建议 2}
+  \item \TODO{建议 3}
+\end{enumerate}
+
+\end{document}
