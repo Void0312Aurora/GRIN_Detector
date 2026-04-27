@@ -16,6 +16,7 @@ from mini_grin_rebuild.core.runs import RunPaths
 from mini_grin_rebuild.data.datasets import DefectDataset
 from mini_grin_rebuild.models.checkpoint import save_checkpoint
 from mini_grin_rebuild.models.unetpp import UNetPP
+from mini_grin_rebuild.physics.factory import create_forward_model, forward_model_meta, freeze_forward_model
 from mini_grin_rebuild.physics.layer import DifferentiableGradientLayer
 from mini_grin_rebuild.reconstruction import reconstruct_defect_pseudo_poisson
 from mini_grin_rebuild.training.inputs import build_inputs
@@ -39,14 +40,7 @@ def _select_device(device: str) -> torch.device:
 
 
 def _freeze_physics_to_ideal(physics: DifferentiableGradientLayer) -> None:
-    with torch.no_grad():
-        physics.log_sigma.fill_(-10.0)
-        physics.log_gain.fill_(0.0)
-        physics.bias.fill_(0.0)
-        physics.shifts.fill_(0.0)
-        physics.lfields.fill_(0.0)
-    for p in physics.parameters():
-        p.requires_grad_(False)
+    freeze_forward_model(physics)
 
 
 def _wrap_height(cfg: SimulationConfig) -> float:
@@ -324,8 +318,7 @@ def _infer_in_channels(
 ) -> int:
     sample = dataset[0]
     sample_batched = {k: (v.unsqueeze(0) if torch.is_tensor(v) else v) for k, v in sample.items()}
-    tmp_physics = DifferentiableGradientLayer(sim_cfg).to(device)
-    _freeze_physics_to_ideal(tmp_physics)
+    tmp_physics = create_forward_model(sim_cfg, train_cfg, device=device, freeze=True)
     inputs, _ = _prepare_batch_inputs(
         {k: (v.to(device) if torch.is_tensor(v) else v) for k, v in sample_batched.items()},
         tmp_physics,
@@ -376,8 +369,7 @@ def train_dataset(
         output_scale=output_scale,
     ).to(device)
 
-    physics = DifferentiableGradientLayer(sim_cfg).to(device)
-    _freeze_physics_to_ideal(physics)
+    physics = create_forward_model(sim_cfg, train_cfg, device=device, freeze=True)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=train_cfg.lr)
     start_epoch = 1
@@ -425,6 +417,7 @@ def train_dataset(
                 "teacher_loss_weight": float(train_cfg.teacher_loss_weight),
                 "teacher_loss_type": str(train_cfg.teacher_loss_type),
                 "model_padding_mode": str(getattr(train_cfg, "model_padding_mode", "zeros")),
+                **forward_model_meta(train_cfg),
             },
         }
         save_checkpoint(last_path, payload)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, Optional
+from dataclasses import replace
 
 import numpy as np
 import torch
@@ -12,6 +13,7 @@ from mini_grin_rebuild.core.json_io import write_json
 from mini_grin_rebuild.data.datasets import DefectDataset
 from mini_grin_rebuild.models.checkpoint import infer_checkpoint_info, load_checkpoint
 from mini_grin_rebuild.models.unetpp import UNetPP
+from mini_grin_rebuild.physics.factory import create_forward_model, freeze_forward_model
 from mini_grin_rebuild.physics.layer import DifferentiableGradientLayer
 from mini_grin_rebuild.reconstruction import reconstruct_defect_oracle_poisson, reconstruct_defect_pseudo_poisson
 from mini_grin_rebuild.training.inputs import append_coord_channels, build_inputs
@@ -74,14 +76,17 @@ def _select_device(device: str) -> torch.device:
 
 
 def _freeze_physics_to_ideal(physics: DifferentiableGradientLayer) -> None:
-    with torch.no_grad():
-        physics.log_sigma.fill_(-10.0)
-        physics.log_gain.fill_(0.0)
-        physics.bias.fill_(0.0)
-        physics.shifts.fill_(0.0)
-        physics.lfields.fill_(0.0)
-    for p in physics.parameters():
-        p.requires_grad_(False)
+    freeze_forward_model(physics)
+
+
+def _training_cfg_from_model_meta(cfg: ExperimentConfig, model_meta: dict[str, Any]):
+    if "forward_model" not in model_meta and "forward_model_params" not in model_meta:
+        return cfg.training
+    return replace(
+        cfg.training,
+        forward_model=str(model_meta.get("forward_model", cfg.training.forward_model)),
+        forward_model_params=dict(model_meta.get("forward_model_params", cfg.training.forward_model_params) or {}),
+    )
 
 
 def _forward_model(model: torch.nn.Module, inputs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor | None]:
@@ -245,8 +250,8 @@ def evaluate_checkpoint(
     model.load_state_dict(model_state, strict=False)
     model.eval()
 
-    physics = DifferentiableGradientLayer(cfg.simulation).to(device)
-    _freeze_physics_to_ideal(physics)
+    physics_train_cfg = _training_cfg_from_model_meta(cfg, model_meta)
+    physics = create_forward_model(cfg.simulation, physics_train_cfg, device=device, freeze=True)
     if "physics" in ckpt:
         physics.load_state_dict(ckpt["physics"], strict=False)
 
@@ -522,8 +527,7 @@ def evaluate_pseudo_poisson(
     dataset = DefectDataset(Path(data_root), split)
     loader = DataLoader(dataset, batch_size=cfg.training.batch_size, shuffle=False)
 
-    physics = DifferentiableGradientLayer(cfg.simulation).to(device)
-    _freeze_physics_to_ideal(physics)
+    physics = create_forward_model(cfg.simulation, cfg.training, device=device, freeze=True)
     gate_thresholds = GateThresholds.from_training(cfg.training)
     gate_enabled = any(v is not None for v in gate_thresholds.to_dict().values())
     qc_metrics: dict[str, list[float]] = {
@@ -775,8 +779,7 @@ def evaluate_oracle_poisson(
     dataset = DefectDataset(Path(data_root), split)
     loader = DataLoader(dataset, batch_size=cfg.training.batch_size, shuffle=False)
 
-    physics = DifferentiableGradientLayer(cfg.simulation).to(device)
-    _freeze_physics_to_ideal(physics)
+    physics = create_forward_model(cfg.simulation, cfg.training, device=device, freeze=True)
     gate_thresholds = GateThresholds.from_training(cfg.training)
     gate_enabled = any(v is not None for v in gate_thresholds.to_dict().values())
     qc_metrics: dict[str, list[float]] = {

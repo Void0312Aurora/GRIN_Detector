@@ -33,6 +33,8 @@ class PathsConfig:
 
 @dataclass(frozen=True)
 class SimulationConfig:
+    capture_engine: str = "ideal_gradient"
+    capture_engine_params: dict[str, Any] = field(default_factory=dict)
     grid_size: int = 512
     dx: float = 0.39
     gradient_backend: str = "finite"  # "finite" or "spectral"
@@ -123,6 +125,10 @@ class TrainingConfig:
 
     # Model options.
     model_padding_mode: str = "zeros"
+
+    # Differentiable forward model used by physics-based losses / QC.
+    forward_model: str = "ideal_gradient"
+    forward_model_params: dict[str, Any] = field(default_factory=dict)
 
     # Training-time cropping to avoid background-dominated gradients on sparse defects.
     crop_size: int = 0
