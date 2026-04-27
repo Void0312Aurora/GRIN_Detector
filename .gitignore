@@ -17,6 +17,14 @@ external_data/processed/
 *.pt
 *.pth
 
+# sensitive/internal documents
+docs/reports/
+docs/**/*.docx
+docs/**/*.pptx
+
+# local/private benchmark configs
+configs/*instrument_lite*.json
+
 # LaTeX build artifacts
 *.aux
 *.fdb_latexmk
