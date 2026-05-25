@@ -62,6 +62,16 @@ class SimulationConfig:
     defect_center_max_radius_norm: float = 0.5
     defect_amplitude_wrap_min: float = 0.2
     defect_amplitude_wrap_max: float = 1.0
+    allow_defect_wrap_exceed: bool = False
+    large_defect_prob: float = 0.0
+    large_defect_sigma_min_um: float = 2.5
+    large_defect_sigma_max_um: float = 5.0
+    large_scratch_width_min_um: float = 1.5
+    large_scratch_width_max_um: float = 4.0
+    large_scratch_length_min_um: float = 15.0
+    large_scratch_length_max_um: float = 28.0
+    large_defect_amplitude_wrap_min: float = 1.0
+    large_defect_amplitude_wrap_max: float = 2.0
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "SimulationConfig":
@@ -136,6 +146,7 @@ class TrainingConfig:
 
     # Optional pseudo-poisson prior branch (teacher) for stable reconstruction.
     use_pseudo_poisson_prior: bool = False
+    pseudo_poisson_prior_method: str = "pseudo_poisson"
     pseudo_poisson_prior_as_input: bool = True
     pseudo_poisson_prior_scale: float = 1.0
     pseudo_poisson_residual_scale: float = 0.0

@@ -18,7 +18,7 @@ from mini_grin_rebuild.models.checkpoint import save_checkpoint
 from mini_grin_rebuild.models.unetpp import UNetPP
 from mini_grin_rebuild.physics.factory import create_forward_model, forward_model_meta, freeze_forward_model
 from mini_grin_rebuild.physics.layer import DifferentiableGradientLayer
-from mini_grin_rebuild.reconstruction import reconstruct_defect_pseudo_poisson
+from mini_grin_rebuild.reconstruction import reconstruct_defect_coarse_prior
 from mini_grin_rebuild.training.inputs import build_inputs
 from mini_grin_rebuild.training.losses import (
     curl_loss,
@@ -129,15 +129,21 @@ def _prepare_batch_inputs(
         key = f"intensity_{name}"
         if key in batch:
             intensity_inputs[name] = {"I_x": batch[key][:, 0], "I_y": batch[key][:, 1]}
+        raw_key = f"raw_{name}"
+        if raw_key in batch:
+            intensity_inputs.setdefault(name, {})
+            intensity_inputs[name]["I_raw"] = batch[raw_key][:, 0]
 
     standard = batch["standard"]
     reference = batch.get("reference")
 
-    pseudo_poisson_defect = None
-    need_pseudo_poisson = cfg.use_pseudo_poisson_prior or cfg.teacher_loss_weight > 0
-    if need_pseudo_poisson:
+    coarse_prior_defect = None
+    coarse_prior_method = str(getattr(cfg, "pseudo_poisson_prior_method", "pseudo_poisson") or "pseudo_poisson")
+    need_coarse_prior = cfg.use_pseudo_poisson_prior or cfg.teacher_loss_weight > 0
+    if need_coarse_prior:
         with torch.no_grad():
-            pseudo_poisson_defect = reconstruct_defect_pseudo_poisson(
+            coarse_prior_defect = reconstruct_defect_coarse_prior(
+                method=coarse_prior_method,
                 physics=physics,
                 standard_height=standard,
                 diff_ts=diff_ts,
@@ -163,8 +169,8 @@ def _prepare_batch_inputs(
                 name: {k: _crop_batch(v, y0, x0, crop_size) for k, v in tens.items()}
                 for name, tens in intensity_inputs.items()
             }
-        if pseudo_poisson_defect is not None:
-            pseudo_poisson_defect = _crop_batch(pseudo_poisson_defect, y0, x0, crop_size)
+        if coarse_prior_defect is not None:
+            coarse_prior_defect = _crop_batch(coarse_prior_defect, y0, x0, crop_size)
 
     inputs = build_inputs(
         cfg,
@@ -180,10 +186,10 @@ def _prepare_batch_inputs(
         inputs = append_coord_channels(inputs, aperture_radius=ap)
 
     if cfg.use_pseudo_poisson_prior and cfg.pseudo_poisson_prior_as_input:
-        if pseudo_poisson_defect is None:
-            raise RuntimeError("pseudo_poisson_defect missing while use_pseudo_poisson_prior=True")
+        if coarse_prior_defect is None:
+            raise RuntimeError("coarse_prior_defect missing while use_pseudo_poisson_prior=True")
         wrap_h = _wrap_height(physics.cfg)
-        prior_chan = (pseudo_poisson_defect / max(wrap_h, 1e-12)).clamp(min=-1.0, max=1.0)
+        prior_chan = (coarse_prior_defect / max(wrap_h, 1e-12)).clamp(min=-1.0, max=1.0)
         inputs = torch.cat([inputs, prior_chan], dim=1)
 
     aux = {
@@ -191,7 +197,8 @@ def _prepare_batch_inputs(
         "reference": reference,
         "diff_ts": diff_ts,
         "diff_sr": diff_sr,
-        "pseudo_poisson_defect": pseudo_poisson_defect,
+        "coarse_prior_defect": coarse_prior_defect,
+        "coarse_prior_method": coarse_prior_method,
     }
     return inputs, aux
 
@@ -226,9 +233,9 @@ def _epoch_pass(
 
         defect_for_loss = defect_pred
         if cfg.use_pseudo_poisson_prior:
-            base = aux.get("pseudo_poisson_defect")
+            base = aux.get("coarse_prior_defect")
             if base is None:
-                raise RuntimeError("use_pseudo_poisson_prior=True but pseudo_poisson_defect is missing")
+                raise RuntimeError("use_pseudo_poisson_prior=True but coarse_prior_defect is missing")
             defect_for_loss = base * float(cfg.pseudo_poisson_prior_scale) + defect_pred
 
         if train_mode:
@@ -284,9 +291,9 @@ def _epoch_pass(
                 )
 
         if cfg.teacher_loss_weight > 0:
-            base = aux.get("pseudo_poisson_defect")
+            base = aux.get("coarse_prior_defect")
             if base is None:
-                raise RuntimeError("teacher_loss_weight>0 but pseudo_poisson_defect is missing")
+                raise RuntimeError("teacher_loss_weight>0 but coarse_prior_defect is missing")
             target = base
             if cfg.use_pseudo_poisson_prior:
                 target = target * float(cfg.pseudo_poisson_prior_scale)
@@ -405,6 +412,7 @@ def train_dataset(
             "optimizer": optimizer.state_dict(),
             "model_meta": {
                 "use_pseudo_poisson_prior": bool(train_cfg.use_pseudo_poisson_prior),
+                "pseudo_poisson_prior_method": str(getattr(train_cfg, "pseudo_poisson_prior_method", "pseudo_poisson")),
                 "pseudo_poisson_prior_as_input": bool(train_cfg.pseudo_poisson_prior_as_input),
                 "pseudo_poisson_prior_scale": float(train_cfg.pseudo_poisson_prior_scale),
                 "pseudo_poisson_residual_scale": float(residual_scale),

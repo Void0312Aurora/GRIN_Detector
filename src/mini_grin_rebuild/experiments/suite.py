@@ -10,7 +10,13 @@ import numpy as np
 from mini_grin_rebuild.core.configs import ExperimentConfig, load_experiment_config
 from mini_grin_rebuild.core.json_io import read_json, write_json
 from mini_grin_rebuild.core.runs import RunPaths, collect_run_meta, create_run
-from mini_grin_rebuild.evaluation.evaluator import evaluate_checkpoint, evaluate_oracle_poisson, evaluate_pseudo_poisson
+from mini_grin_rebuild.evaluation.evaluator import (
+    evaluate_checkpoint,
+    evaluate_first_order_poisson,
+    evaluate_first_order_sign_quadratic_poisson,
+    evaluate_oracle_poisson,
+    evaluate_pseudo_poisson,
+)
 from mini_grin_rebuild.training.trainer import train_dataset
 
 
@@ -160,7 +166,12 @@ def run_ablation_suite(
             continue
         method = str(item.get("method") or item.get("name") or "")
         label = str(item.get("name") or method)
-        if method not in {"pseudo_poisson", "oracle_poisson"}:
+        if method not in {
+            "pseudo_poisson",
+            "first_order_poisson",
+            "first_order_sign_quadratic_poisson",
+            "oracle_poisson",
+        }:
             raise ValueError(f"Unknown baseline method {method!r} in suite baselines")
 
         run = create_run(
@@ -171,6 +182,22 @@ def run_ablation_suite(
         )
         if method == "pseudo_poisson":
             eval_result = evaluate_pseudo_poisson(
+                base_cfg,
+                data_root=data_root,
+                split=eval_split,
+                out_dir=run.root,
+                num_plots=int(num_plots),
+            )
+        elif method == "first_order_poisson":
+            eval_result = evaluate_first_order_poisson(
+                base_cfg,
+                data_root=data_root,
+                split=eval_split,
+                out_dir=run.root,
+                num_plots=int(num_plots),
+            )
+        elif method == "first_order_sign_quadratic_poisson":
+            eval_result = evaluate_first_order_sign_quadratic_poisson(
                 base_cfg,
                 data_root=data_root,
                 split=eval_split,
@@ -284,6 +311,14 @@ def run_ablation_suite(
         "defect_psnr",
         "defect_rmse",
         "defect_corr",
+        "sign_x_global",
+        "sign_y_global",
+        "sign_x_defect_local",
+        "sign_y_defect_local",
+        "sign_x_branch_flip",
+        "sign_y_branch_flip",
+        "sign_x_branch_flip_count",
+        "sign_y_branch_flip_count",
         "aperture_rmse",
         "edge_rmse",
         "center_rmse",
@@ -312,6 +347,14 @@ def run_ablation_suite(
             "defect_psnr": _metric_get(e, "summary_defect.psnr"),
             "defect_rmse": _metric_get(e, "summary_defect.rmse"),
             "defect_corr": _metric_get(e, "summary_defect.corr"),
+            "sign_x_global": _metric_get(e, "summary_sign_gradient.x.global.accuracy"),
+            "sign_y_global": _metric_get(e, "summary_sign_gradient.y.global.accuracy"),
+            "sign_x_defect_local": _metric_get(e, "summary_sign_gradient.x.defect_local.accuracy"),
+            "sign_y_defect_local": _metric_get(e, "summary_sign_gradient.y.defect_local.accuracy"),
+            "sign_x_branch_flip": _metric_get(e, "summary_sign_gradient.x.branch_flip.accuracy"),
+            "sign_y_branch_flip": _metric_get(e, "summary_sign_gradient.y.branch_flip.accuracy"),
+            "sign_x_branch_flip_count": _metric_get(e, "summary_sign_gradient.x.branch_flip.count"),
+            "sign_y_branch_flip_count": _metric_get(e, "summary_sign_gradient.y.branch_flip.count"),
             "aperture_rmse": _metric_get(e, "summary_regions.aperture.rmse"),
             "edge_rmse": _metric_get(e, "summary_regions.edge.rmse"),
             "center_rmse": _metric_get(e, "summary_regions.center.rmse"),

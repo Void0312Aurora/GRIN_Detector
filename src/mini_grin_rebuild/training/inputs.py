@@ -78,6 +78,8 @@ def build_inputs(
                 if "I_x" in intensity and "I_y" in intensity:
                     chans.append(_normalize(intensity["I_x"]))
                     chans.append(_normalize(intensity["I_y"]))
+                if "I_raw" in intensity:
+                    chans.append(_normalize(intensity["I_raw"]))
 
     if train_cfg.use_phase_inputs and standard_height is not None:
         std = standard_height

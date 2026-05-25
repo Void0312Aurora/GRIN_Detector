@@ -1,0 +1,396 @@
+{
+  "checkpoint": "/home/void0312/PINNs/mini_grin_rebuild/runs/20260525_170119_f243e82c_20260525_170118_bdcaa656_suite_no_raw_dic_leakage_smoke_nonideal_dic_no_raw_nn_dic_only_s42/checkpoints/best.pt",
+  "config": "/home/void0312/PINNs/mini_grin_rebuild/configs/nonideal_dic_no_raw_smoke64.json",
+  "data_root": "/tmp/no_raw_dic_leakage_ablation/data/nonideal_dic_no_raw",
+  "ideal_data_root": "/tmp/no_raw_dic_leakage_ablation/data/ideal_dic",
+  "open_method": "first_order_sign_quadratic_poisson",
+  "samples": [
+    {
+      "dic_fit_panel": "/tmp/no_raw_dic_leakage_ablation/visualizations/sample_0012_dic_fit_panel.png",
+      "file": "/tmp/no_raw_dic_leakage_ablation/data/nonideal_dic_no_raw/test/sample_0012.npz",
+      "index": 12,
+      "metrics": {
+        "defect_peak_abs": 0.32274511456489563,
+        "defect_support_px": 272,
+        "nn": {
+          "defect_corr_local": 0.2297220677137375,
+          "defect_rmse_local": 0.1815054565668106,
+          "sign": {
+            "x": {
+              "branch_flip": {
+                "accuracy": NaN,
+                "correct": 0,
+                "count": 0
+              },
+              "defect_local": {
+                "accuracy": 1.0,
+                "correct": 263,
+                "count": 263
+              },
+              "global": {
+                "accuracy": 1.0,
+                "correct": 3096,
+                "count": 3096
+              }
+            },
+            "y": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 9
+              },
+              "defect_local": {
+                "accuracy": 0.9655172413793104,
+                "correct": 252,
+                "count": 261
+              },
+              "global": {
+                "accuracy": 0.9970911441499677,
+                "correct": 3085,
+                "count": 3094
+              }
+            }
+          }
+        },
+        "nonideal_vs_ideal_observation": {
+          "mean_abs_delta": 0.08490898460149765,
+          "p95_abs_delta": 0.3485991954803467,
+          "relative_mean_delta": 2.3451178073883057
+        },
+        "open": {
+          "defect_corr_local": -0.013487054035067558,
+          "defect_rmse_local": 0.1635877788066864,
+          "sign": {
+            "x": {
+              "branch_flip": {
+                "accuracy": NaN,
+                "correct": 0,
+                "count": 0
+              },
+              "defect_local": {
+                "accuracy": 1.0,
+                "correct": 263,
+                "count": 263
+              },
+              "global": {
+                "accuracy": 1.0,
+                "correct": 3096,
+                "count": 3096
+              }
+            },
+            "y": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 9
+              },
+              "defect_local": {
+                "accuracy": 0.9655172413793104,
+                "correct": 252,
+                "count": 261
+              },
+              "global": {
+                "accuracy": 0.9970911441499677,
+                "correct": 3085,
+                "count": 3094
+              }
+            }
+          }
+        }
+      },
+      "prediction_panel": "/tmp/no_raw_dic_leakage_ablation/visualizations/sample_0012_prediction_panel.png"
+    },
+    {
+      "dic_fit_panel": "/tmp/no_raw_dic_leakage_ablation/visualizations/sample_0009_dic_fit_panel.png",
+      "file": "/tmp/no_raw_dic_leakage_ablation/data/nonideal_dic_no_raw/test/sample_0009.npz",
+      "index": 9,
+      "metrics": {
+        "defect_peak_abs": 0.2227458655834198,
+        "defect_support_px": 211,
+        "nn": {
+          "defect_corr_local": -0.2042524367570877,
+          "defect_rmse_local": 0.08555740863084793,
+          "sign": {
+            "x": {
+              "branch_flip": {
+                "accuracy": NaN,
+                "correct": 0,
+                "count": 0
+              },
+              "defect_local": {
+                "accuracy": 1.0,
+                "correct": 195,
+                "count": 195
+              },
+              "global": {
+                "accuracy": 1.0,
+                "correct": 3096,
+                "count": 3096
+              }
+            },
+            "y": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 5
+              },
+              "defect_local": {
+                "accuracy": 0.9742268041237113,
+                "correct": 189,
+                "count": 194
+              },
+              "global": {
+                "accuracy": 0.9983844911147012,
+                "correct": 3090,
+                "count": 3095
+              }
+            }
+          }
+        },
+        "nonideal_vs_ideal_observation": {
+          "mean_abs_delta": 0.08341531455516815,
+          "p95_abs_delta": 0.2637156844139099,
+          "relative_mean_delta": 1.8204572200775146
+        },
+        "open": {
+          "defect_corr_local": -0.016890965402126312,
+          "defect_rmse_local": 0.12599867582321167,
+          "sign": {
+            "x": {
+              "branch_flip": {
+                "accuracy": NaN,
+                "correct": 0,
+                "count": 0
+              },
+              "defect_local": {
+                "accuracy": 1.0,
+                "correct": 195,
+                "count": 195
+              },
+              "global": {
+                "accuracy": 1.0,
+                "correct": 3096,
+                "count": 3096
+              }
+            },
+            "y": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 5
+              },
+              "defect_local": {
+                "accuracy": 0.9742268041237113,
+                "correct": 189,
+                "count": 194
+              },
+              "global": {
+                "accuracy": 0.9983844911147012,
+                "correct": 3090,
+                "count": 3095
+              }
+            }
+          }
+        }
+      },
+      "prediction_panel": "/tmp/no_raw_dic_leakage_ablation/visualizations/sample_0009_prediction_panel.png"
+    },
+    {
+      "dic_fit_panel": "/tmp/no_raw_dic_leakage_ablation/visualizations/sample_0003_dic_fit_panel.png",
+      "file": "/tmp/no_raw_dic_leakage_ablation/data/nonideal_dic_no_raw/test/sample_0003.npz",
+      "index": 3,
+      "metrics": {
+        "defect_peak_abs": 0.25181815028190613,
+        "defect_support_px": 108,
+        "nn": {
+          "defect_corr_local": -0.3911151885986328,
+          "defect_rmse_local": 0.09003118425607681,
+          "sign": {
+            "x": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 4
+              },
+              "defect_local": {
+                "accuracy": 0.9629629629629629,
+                "correct": 104,
+                "count": 108
+              },
+              "global": {
+                "accuracy": 0.9987075928917609,
+                "correct": 3091,
+                "count": 3095
+              }
+            },
+            "y": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 1
+              },
+              "defect_local": {
+                "accuracy": 0.9906542056074766,
+                "correct": 106,
+                "count": 107
+              },
+              "global": {
+                "accuracy": 0.9996768982229403,
+                "correct": 3094,
+                "count": 3095
+              }
+            }
+          }
+        },
+        "nonideal_vs_ideal_observation": {
+          "mean_abs_delta": 0.037765029817819595,
+          "p95_abs_delta": 0.1623874306678772,
+          "relative_mean_delta": 2.8614017963409424
+        },
+        "open": {
+          "defect_corr_local": -0.16300037503242493,
+          "defect_rmse_local": 0.11890517175197601,
+          "sign": {
+            "x": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 4
+              },
+              "defect_local": {
+                "accuracy": 0.9629629629629629,
+                "correct": 104,
+                "count": 108
+              },
+              "global": {
+                "accuracy": 0.9987075928917609,
+                "correct": 3091,
+                "count": 3095
+              }
+            },
+            "y": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 1
+              },
+              "defect_local": {
+                "accuracy": 0.9906542056074766,
+                "correct": 106,
+                "count": 107
+              },
+              "global": {
+                "accuracy": 0.9996768982229403,
+                "correct": 3094,
+                "count": 3095
+              }
+            }
+          }
+        }
+      },
+      "prediction_panel": "/tmp/no_raw_dic_leakage_ablation/visualizations/sample_0003_prediction_panel.png"
+    },
+    {
+      "dic_fit_panel": "/tmp/no_raw_dic_leakage_ablation/visualizations/sample_0011_dic_fit_panel.png",
+      "file": "/tmp/no_raw_dic_leakage_ablation/data/nonideal_dic_no_raw/test/sample_0011.npz",
+      "index": 11,
+      "metrics": {
+        "defect_peak_abs": 0.18590928614139557,
+        "defect_support_px": 248,
+        "nn": {
+          "defect_corr_local": -0.25101056694984436,
+          "defect_rmse_local": 0.06139872595667839,
+          "sign": {
+            "x": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 3
+              },
+              "defect_local": {
+                "accuracy": 0.9873417721518988,
+                "correct": 234,
+                "count": 237
+              },
+              "global": {
+                "accuracy": 0.9990306946688207,
+                "correct": 3092,
+                "count": 3095
+              }
+            },
+            "y": {
+              "branch_flip": {
+                "accuracy": NaN,
+                "correct": 0,
+                "count": 0
+              },
+              "defect_local": {
+                "accuracy": 1.0,
+                "correct": 238,
+                "count": 238
+              },
+              "global": {
+                "accuracy": 1.0,
+                "correct": 3096,
+                "count": 3096
+              }
+            }
+          }
+        },
+        "nonideal_vs_ideal_observation": {
+          "mean_abs_delta": 0.0465463250875473,
+          "p95_abs_delta": 0.19861209392547607,
+          "relative_mean_delta": 2.40704345703125
+        },
+        "open": {
+          "defect_corr_local": 0.023432563990354538,
+          "defect_rmse_local": 0.0856679379940033,
+          "sign": {
+            "x": {
+              "branch_flip": {
+                "accuracy": 0.0,
+                "correct": 0,
+                "count": 3
+              },
+              "defect_local": {
+                "accuracy": 0.9873417721518988,
+                "correct": 234,
+                "count": 237
+              },
+              "global": {
+                "accuracy": 0.9990306946688207,
+                "correct": 3092,
+                "count": 3095
+              }
+            },
+            "y": {
+              "branch_flip": {
+                "accuracy": NaN,
+                "correct": 0,
+                "count": 0
+              },
+              "defect_local": {
+                "accuracy": 1.0,
+                "correct": 238,
+                "count": 238
+              },
+              "global": {
+                "accuracy": 1.0,
+                "correct": 3096,
+                "count": 3096
+              }
+            }
+          }
+        }
+      },
+      "prediction_panel": "/tmp/no_raw_dic_leakage_ablation/visualizations/sample_0011_prediction_panel.png"
+    }
+  ],
+  "selected_indices": [
+    12,
+    9,
+    3,
+    11
+  ],
+  "split": "test"
+}

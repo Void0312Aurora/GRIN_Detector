@@ -35,7 +35,10 @@ class TestSuiteCommand(unittest.TestCase):
         suite_spec = {
             "name": "unittest_suite",
             "seeds": [123],
-            "baselines": [{"name": "pseudo_poisson", "method": "pseudo_poisson"}],
+            "baselines": [
+                {"name": "pseudo_poisson", "method": "pseudo_poisson"},
+                {"name": "first_order_poisson", "method": "first_order_poisson"},
+            ],
             "experiments": [
                 {
                     "name": "nn_default",
@@ -109,4 +112,3 @@ class TestSuiteCommand(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

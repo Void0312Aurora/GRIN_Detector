@@ -1,0 +1,48 @@
+{
+  "name": "no_raw_dic_leakage_smoke",
+  "seeds": [42],
+  "baselines": [
+    {
+      "name": "pseudo_poisson",
+      "method": "pseudo_poisson"
+    },
+    {
+      "name": "open_first_order_sign",
+      "method": "first_order_sign_quadratic_poisson"
+    },
+    {
+      "name": "oracle_poisson_upper_bound",
+      "method": "oracle_poisson"
+    }
+  ],
+  "experiments": [
+    {
+      "name": "nn_dic_only",
+      "overrides": {
+        "training": {
+          "use_sr_inputs": true,
+          "use_raw_intensity_inputs": false,
+          "use_phase_inputs": false,
+          "use_pseudo_poisson_prior": false,
+          "pseudo_poisson_prior_as_input": false,
+          "teacher_loss_weight": 0.0
+        }
+      }
+    },
+    {
+      "name": "nn_dic_prior_input",
+      "overrides": {
+        "training": {
+          "use_sr_inputs": true,
+          "use_raw_intensity_inputs": false,
+          "use_phase_inputs": false,
+          "use_pseudo_poisson_prior": true,
+          "pseudo_poisson_prior_as_input": true,
+          "pseudo_poisson_prior_scale": 1.0,
+          "pseudo_poisson_residual_scale": 0.15,
+          "teacher_loss_weight": 0.0
+        }
+      }
+    }
+  ]
+}
