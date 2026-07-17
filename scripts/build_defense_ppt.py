@@ -17,7 +17,7 @@ from spire.presentation import FileFormat, Presentation as SpirePresentation
 
 
 ROOT = Path(__file__).resolve().parents[1]
-REPORTS_DIR = ROOT / "docs" / "reports"
+REPORTS_DIR = ROOT / "local_archive" / "non_project_reports"
 ASSETS_DIR = REPORTS_DIR / "答辩汇报_2026-04-23_assets"
 OUTPUT_PPTX = REPORTS_DIR / "答辩汇报_2026-04-23.pptx"
 OUTPUT_PDF = REPORTS_DIR / "答辩汇报_2026-04-23.pdf"
