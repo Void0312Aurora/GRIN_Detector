@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,6 +22,8 @@ def _bootstrap_src() -> None:
 
 _bootstrap_src()
 
+_HAS_LEGACY_MINI_GRIN = importlib.util.find_spec("mini_grin") is not None
+
 from mini_grin_rebuild.core.configs import SimulationConfig as NewSimCfg  # noqa: E402
 from mini_grin_rebuild.core.configs import TrainingConfig as NewTrainCfg  # noqa: E402
 from mini_grin_rebuild.data.datasets import DefectDataset as NewDataset  # noqa: E402
@@ -32,6 +35,10 @@ from mini_grin_rebuild.training.inputs import build_inputs as new_build_inputs  
 from mini_grin_rebuild.training.losses import sr_diff_loss as new_sr_diff_loss  # noqa: E402
 
 
+@unittest.skipUnless(
+    _HAS_LEGACY_MINI_GRIN,
+    "legacy mini_grin reference implementation not available in workspace root or Archive/",
+)
 class TestLegacyCompatibility(unittest.TestCase):
     def test_virtual_objects_build_triplet_matches_legacy(self) -> None:
         from mini_grin.core.configs import SimulationConfig as OldSimCfg

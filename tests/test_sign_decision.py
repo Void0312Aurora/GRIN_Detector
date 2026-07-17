@@ -14,6 +14,9 @@ def _bootstrap_src() -> None:
 
 _bootstrap_src()
 
+ROOT = Path(__file__).resolve().parents[1]
+OPTICAL_LEAKAGE_CONFIG = ROOT / "configs" / "optical_leakage_dic_nominal.json"
+
 from mini_grin_rebuild.core.configs import load_experiment_config  # noqa: E402
 from mini_grin_rebuild.data.virtual_objects import microlens_standard  # noqa: E402
 from mini_grin_rebuild.evaluation.sign_decision import (  # noqa: E402
@@ -35,9 +38,7 @@ class TestSignDecisionHelpers(unittest.TestCase):
         self.assertFalse(bool(mask[0, 0]))
 
     def test_first_order_sign_map_matches_closed_form(self) -> None:
-        cfg = load_experiment_config(
-            Path("/home/void0312/PINNs/mini_grin_rebuild/configs/optical_leakage_dic_nominal.json")
-        )
+        cfg = load_experiment_config(OPTICAL_LEAKAGE_CONFIG)
         physics = create_forward_model(cfg.simulation, cfg.training, device="cpu", freeze=True)
         standard = microlens_standard(cfg.simulation).astype(np.float32)
 
@@ -66,9 +67,7 @@ class TestSignDecisionHelpers(unittest.TestCase):
 
 class TestSignDecisionComparison(unittest.TestCase):
     def test_raw_branch_sign_map_smoke(self) -> None:
-        cfg = load_experiment_config(
-            Path("/home/void0312/PINNs/mini_grin_rebuild/configs/optical_leakage_dic_nominal.json")
-        )
+        cfg = load_experiment_config(OPTICAL_LEAKAGE_CONFIG)
         physics = create_forward_model(cfg.simulation, cfg.training, device="cpu", freeze=True)
         engine = create_simulation_engine(cfg.simulation)
         rng = np.random.default_rng(7)
@@ -113,9 +112,7 @@ class TestSignDecisionComparison(unittest.TestCase):
         self.assertTrue(np.all(np.isin(raw_maps["y"][raw_maps["sample_mask_y"]], (-1, 1))))
 
     def test_nominal_sign_map_comparison(self) -> None:
-        cfg = load_experiment_config(
-            Path("/home/void0312/PINNs/mini_grin_rebuild/configs/optical_leakage_dic_nominal.json")
-        )
+        cfg = load_experiment_config(OPTICAL_LEAKAGE_CONFIG)
         records = run_sign_method_comparison(
             cfg,
             samples=8,

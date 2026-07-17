@@ -118,6 +118,42 @@ def masked_volume_rel_error(pred: torch.Tensor, target: torch.Tensor, mask: torc
     return num / denom
 
 
+def masked_slope(pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    p = _as_hw(pred)
+    t = _as_hw(target)
+    m = _as_hw(mask).to(dtype=torch.bool)
+    if torch.sum(m) == 0:
+        return torch.tensor(float("nan"), device=p.device, dtype=p.dtype)
+    yt = t[m]
+    yp = p[m]
+    den = torch.sum(yt * yt) + 1e-8
+    return torch.sum(yt * yp) / den
+
+
+def masked_peak_abs(values: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    v = _as_hw(values)
+    m = _as_hw(mask).to(dtype=torch.bool)
+    if torch.sum(m) == 0:
+        return torch.tensor(float("nan"), device=v.device, dtype=v.dtype)
+    return torch.max(torch.abs(v[m]))
+
+
+def masked_peak_ratio(pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    p_peak = masked_peak_abs(pred, mask)
+    t_peak = masked_peak_abs(target, mask)
+    if torch.isnan(p_peak) or torch.isnan(t_peak) or t_peak < 1e-8:
+        return torch.tensor(float("nan"), device=_as_hw(pred).device, dtype=_as_hw(pred).dtype)
+    return p_peak / t_peak
+
+
+def masked_mean_abs_ratio(pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    p_mean = masked_mean_abs(pred, mask)
+    t_mean = masked_mean_abs(target, mask)
+    if torch.isnan(p_mean) or torch.isnan(t_mean) or t_mean < 1e-8:
+        return torch.tensor(float("nan"), device=_as_hw(pred).device, dtype=_as_hw(pred).dtype)
+    return p_mean / t_mean
+
+
 def binary_precision(pred_mask: torch.Tensor, true_mask: torch.Tensor) -> torch.Tensor:
     p = _as_hw(pred_mask).to(dtype=torch.bool)
     t = _as_hw(true_mask).to(dtype=torch.bool)
@@ -378,8 +414,12 @@ __all__ = [
     "masked_correlation",
     "masked_abs_quantile",
     "masked_mean_abs",
+    "masked_mean_abs_ratio",
     "masked_psnr",
+    "masked_peak_abs",
+    "masked_peak_ratio",
     "masked_rmse",
+    "masked_slope",
     "masked_volume_rel_error",
     "peak_rel_error",
     "psnr",

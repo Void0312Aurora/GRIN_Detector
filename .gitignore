@@ -6,21 +6,35 @@ __pycache__/
 .gitignore
 
 # local datasets & run artifacts
-data/
-runs/
-runs_refs/
-runs_archive/
-outputs/
-external_data/raw/
-external_data/processed/
+/data/
+/runs/
+/runs_archive/
+/output/
+/outputs/
+/external_data/raw/
+/external_data/processed/
 *.npz
 *.pt
 *.pth
+*.egg-info/
+
+# local smoke/temporary experiment inputs
+/tmp_wrap_smoke*/
+/configs/tmp_*.json
 
 # sensitive/internal documents
-docs/reports/
+/docs/reports/
+/docs/Temp/
 docs/**/*.docx
 docs/**/*.pptx
+/local_archive/
+
+# local report/presentation tooling and generated figures
+/docs/unetpp_architecture_*.png
+/scripts/draw_architecture.py
+/scripts/export_formula_images*.py
+/scripts/rebuild_slide3_principle.py
+/scripts/render_*.py
 
 # local/private benchmark configs
 configs/*instrument_lite*.json
