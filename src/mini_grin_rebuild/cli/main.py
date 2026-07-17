@@ -143,7 +143,12 @@ def cmd_eval(args: argparse.Namespace) -> int:
 
 
 def cmd_baseline(args: argparse.Namespace) -> int:
-    from mini_grin_rebuild.evaluation.evaluator import evaluate_oracle_poisson, evaluate_pseudo_poisson
+    from mini_grin_rebuild.evaluation.evaluator import (
+        evaluate_first_order_poisson,
+        evaluate_first_order_sign_quadratic_poisson,
+        evaluate_oracle_poisson,
+        evaluate_pseudo_poisson,
+    )
 
     cfg_path = Path(args.config).expanduser()
     cfg = load_experiment_config(cfg_path)
@@ -159,6 +164,22 @@ def cmd_baseline(args: argparse.Namespace) -> int:
     method = str(getattr(args, "method", "pseudo_poisson"))
     if method == "pseudo_poisson":
         evaluate_pseudo_poisson(
+            cfg,
+            data_root=dataset_root,
+            split=args.split,
+            out_dir=run.root,
+            num_plots=args.num_plots,
+        )
+    elif method == "first_order_poisson":
+        evaluate_first_order_poisson(
+            cfg,
+            data_root=dataset_root,
+            split=args.split,
+            out_dir=run.root,
+            num_plots=args.num_plots,
+        )
+    elif method == "first_order_sign_quadratic_poisson":
+        evaluate_first_order_sign_quadratic_poisson(
             cfg,
             data_root=dataset_root,
             split=args.split,
@@ -291,11 +312,21 @@ def build_parser() -> argparse.ArgumentParser:
     p_eval.add_argument("--name", type=str, default=None)
     p_eval.set_defaults(func=cmd_eval)
 
-    p_base = sub.add_parser("baseline", help="Evaluate pseudo-Poisson baseline reconstruction")
+    p_base = sub.add_parser("baseline", help="Evaluate Poisson-style baseline reconstruction")
     p_base.add_argument("--config", type=str, default=str(default_cfg) if default_cfg else None, required=default_cfg is None)
     p_base.add_argument("--data-root", type=str, default=None, help="Dataset root (defaults to <project>/data/mini_grin_dataset)")
     p_base.add_argument("--split", type=str, default="test", choices=["train", "val", "test"])
-    p_base.add_argument("--method", type=str, default="pseudo_poisson", choices=["pseudo_poisson", "oracle_poisson"])
+    p_base.add_argument(
+        "--method",
+        type=str,
+        default="pseudo_poisson",
+        choices=[
+            "pseudo_poisson",
+            "first_order_poisson",
+            "first_order_sign_quadratic_poisson",
+            "oracle_poisson",
+        ],
+    )
     p_base.add_argument("--num-plots", type=int, default=3)
     p_base.add_argument("--name", type=str, default=None)
     p_base.set_defaults(func=cmd_baseline)

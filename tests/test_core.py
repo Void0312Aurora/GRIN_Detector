@@ -35,6 +35,18 @@ class TestConfigs(unittest.TestCase):
         with self.assertRaises(KeyError):
             ExperimentConfig.from_dict({"schema_version": 1, "unknown": 123})
 
+    def test_training_config_accepts_prior_method(self) -> None:
+        cfg = ExperimentConfig.from_dict(
+            {
+                "schema_version": 1,
+                "training": {
+                    "use_pseudo_poisson_prior": True,
+                    "pseudo_poisson_prior_method": "first_order_poisson",
+                },
+            }
+        )
+        self.assertEqual(cfg.training.pseudo_poisson_prior_method, "first_order_poisson")
+
 
 class TestRuns(unittest.TestCase):
     def test_create_run_writes_audit_files(self) -> None:
@@ -84,4 +96,3 @@ class TestCLI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

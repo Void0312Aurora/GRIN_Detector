@@ -22,6 +22,7 @@ from mini_grin_rebuild.reconstruction import (
     reconstruct_defect_oracle_poisson,
     reconstruct_defect_pseudo_poisson,
 )
+from mini_grin_rebuild.reconstruction.pseudo_poisson import reconstruct_defect_residue_cut_poisson
 from mini_grin_rebuild.training.inputs import append_coord_channels, build_inputs
 from mini_grin_rebuild.visualization.plots import plot_defect_and_intensity
 from mini_grin_rebuild.evaluation.gating import GateThresholds, gate_decision, radial_masks
@@ -1074,6 +1075,27 @@ def evaluate_first_order_sign_quadratic_poisson(
     )
 
 
+def evaluate_residue_cut_poisson(
+    cfg: ExperimentConfig,
+    *,
+    data_root: str | Path,
+    split: str,
+    out_dir: str | Path,
+    num_plots: int = 3,
+) -> Dict[str, Any]:
+    return _evaluate_baseline_reconstruction(
+        cfg,
+        data_root=data_root,
+        split=split,
+        out_dir=out_dir,
+        num_plots=num_plots,
+        method="residue_cut_poisson",
+        plot_label="residue_cut_poisson",
+        reconstructor=reconstruct_defect_residue_cut_poisson,
+        needs_defect_true=False,
+    )
+
+
 def evaluate_oracle_poisson(
     cfg: ExperimentConfig,
     *,
@@ -1101,4 +1123,5 @@ __all__ = [
     "evaluate_first_order_sign_quadratic_poisson",
     "evaluate_oracle_poisson",
     "evaluate_pseudo_poisson",
+    "evaluate_residue_cut_poisson",
 ]

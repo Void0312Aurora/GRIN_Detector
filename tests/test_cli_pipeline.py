@@ -134,6 +134,10 @@ class TestCLIPipeline(unittest.TestCase):
             self.assertEqual(rc, 0)
             run_eval = Path(buf.getvalue().strip())
             self.assertTrue((run_eval / "eval_metrics.json").is_file())
+            eval_metrics = json.loads((run_eval / "eval_metrics.json").read_text(encoding="utf-8"))
+            for key in ("slope", "peak_ratio", "mean_abs_ratio"):
+                self.assertIn(key, eval_metrics["summary_defect"])
+            self.assertIn("summary_wrap_groups", eval_metrics)
 
             # baseline eval (no plots)
             buf = io.StringIO()
@@ -156,7 +160,67 @@ class TestCLIPipeline(unittest.TestCase):
             self.assertEqual(rc, 0)
             run_base = Path(buf.getvalue().strip())
             self.assertTrue((run_base / "eval_metrics.json").is_file())
+            base_metrics = json.loads((run_base / "eval_metrics.json").read_text(encoding="utf-8"))
+            for key in ("slope", "peak_ratio", "mean_abs_ratio"):
+                self.assertIn(key, base_metrics["summary_defect"])
+            self.assertIn("summary_wrap_groups", base_metrics)
 
+            # first-order baseline eval (no plots)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = cli_main(
+                    [
+                        "baseline",
+                        "--config",
+                        str(cfg_path),
+                        "--data-root",
+                        str(dataset_root),
+                        "--split",
+                        "val",
+                        "--method",
+                        "first_order_poisson",
+                        "--num-plots",
+                        "0",
+                        "--name",
+                        "unittest",
+                    ]
+                )
+            self.assertEqual(rc, 0)
+            run_first = Path(buf.getvalue().strip())
+            self.assertTrue((run_first / "eval_metrics.json").is_file())
+            first_metrics = json.loads((run_first / "eval_metrics.json").read_text(encoding="utf-8"))
+            for key in ("slope", "peak_ratio", "mean_abs_ratio"):
+                self.assertIn(key, first_metrics["summary_defect"])
+            self.assertIn("summary_wrap_groups", first_metrics)
+
+            # hybrid baseline eval (no plots)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = cli_main(
+                    [
+                        "baseline",
+                        "--config",
+                        str(cfg_path),
+                        "--data-root",
+                        str(dataset_root),
+                        "--split",
+                        "val",
+                        "--method",
+                        "first_order_sign_quadratic_poisson",
+                        "--num-plots",
+                        "0",
+                        "--name",
+                        "unittest",
+                    ]
+                )
+            self.assertEqual(rc, 0)
+            run_hybrid = Path(buf.getvalue().strip())
+            self.assertTrue((run_hybrid / "eval_metrics.json").is_file())
+            hybrid_metrics = json.loads((run_hybrid / "eval_metrics.json").read_text(encoding="utf-8"))
+            self.assertEqual(hybrid_metrics["method"], "first_order_sign_quadratic_poisson")
+            for key in ("slope", "peak_ratio", "mean_abs_ratio"):
+                self.assertIn(key, hybrid_metrics["summary_defect"])
+            self.assertIn("summary_wrap_groups", hybrid_metrics)
 
 if __name__ == "__main__":
     unittest.main()
