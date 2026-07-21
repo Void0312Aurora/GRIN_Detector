@@ -18,6 +18,7 @@ from mini_grin_rebuild.models.checkpoint import save_checkpoint
 from mini_grin_rebuild.models.unetpp import UNetPP
 from mini_grin_rebuild.physics.factory import create_forward_model, forward_model_meta, freeze_forward_model
 from mini_grin_rebuild.physics.layer import DifferentiableGradientLayer
+from mini_grin_rebuild.physics.phase import phase_scale
 from mini_grin_rebuild.reconstruction import reconstruct_defect_coarse_prior
 from mini_grin_rebuild.training.inputs import build_inputs
 from mini_grin_rebuild.training.losses import (
@@ -44,8 +45,8 @@ def _freeze_physics_to_ideal(physics: DifferentiableGradientLayer) -> None:
 
 
 def _wrap_height(cfg: SimulationConfig) -> float:
-    phase_scale = (2.0 * math.pi / cfg.wavelength) * (cfg.n_object - cfg.n_air)
-    return float((math.pi * cfg.wrap_safety) / max(phase_scale, 1e-12))
+    scale = phase_scale(cfg)
+    return float((math.pi * cfg.wrap_safety) / max(scale, 1e-12))
 
 
 def _forward_model(model: torch.nn.Module, inputs: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor | None]:

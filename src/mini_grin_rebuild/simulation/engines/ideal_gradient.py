@@ -5,12 +5,12 @@ from typing import Any
 import numpy as np
 
 from mini_grin_rebuild.core.configs import SimulationConfig
+from mini_grin_rebuild.physics.phase import phase_model_meta, phase_scale
 from mini_grin_rebuild.simulation.types import Capture
 
 
 def phase_from_height(cfg: SimulationConfig, height: np.ndarray) -> np.ndarray:
-    scale = (2.0 * np.pi / cfg.wavelength) * (cfg.n_object - cfg.n_air)
-    return scale * height
+    return phase_scale(cfg) * height
 
 
 class IdealGradientEngine:
@@ -51,6 +51,7 @@ class IdealGradientEngine:
             "engine_version": self.version,
             "model": "squared_phase_gradient",
             "noise_model": "additive_gaussian" if self.cfg.noise_level > 0 else "none",
+            "phase_model": phase_model_meta(self.cfg),
         }
 
 
