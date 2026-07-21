@@ -43,7 +43,7 @@ Because the port is now known to be the postselected dark port, the bright-field
 
 3. The complex-field engine can use a coherent circular pupil with cutoff `NA/lambda`, rather than only an empirical Gaussian frequency aperture.
 
-4. The apparatus-oriented config is `configs/reflection_microlens520_actual.json`. Its `-100` defocus and `8 px` raw blur are nuisance-fit values in the current simulator coordinates, not calibrated instrument measurements.
+4. The apparatus-oriented config is `configs/reflection_microlens520_actual.json`. The `-100` defocus and `8 px` raw blur quoted here were the bright-field-surrogate nuisance values of the first pass; the dark-port model fit later replaced them with `defocus 0` and `blur 1 px` (see the dark-port sections below).
 
 5. The complex-field engine now supports localized coherent ghost paths. Each path can include:
 
@@ -147,7 +147,7 @@ The uniform-amplitude coherent dark-port model fails in an instructive way: it p
 
 The `2-6 DN` interior corresponds to at most a few photoelectrons at the measured `0.46 DN/e-` gain, so the black interior is radiometrically consistent with near-total suppression. Conclusion: the bright-field `I_raw` comparison stays as a shape surrogate for registration purposes, and the physical dark-port adaptation needs the amplitude/pupil ingredients before the fringe-free black aperture can be reproduced. Fit artifacts are under `reflection_darkport_comparison_ix`, `_iy` and `_ix_small`.
 
-Config note: both reflection configs now carry `shear_px = 1.573` (the camera-plane reading of the stated `10 um` at the `13.56x` working magnification, i.e. `0.74 um` in the object plane) and a data-calibrated camera block (`photon_gain` about `200-400` photoelectrons per intensity unit, matching the measured `0.46 DN/e-` at `saturation_level 2.0`; the previous `8000-20000` overstated the photon budget by more than an order of magnitude). The shear value is provisional until the reference plane is confirmed.
+Config note: both reflection configs now carry `shear_px = 1.573` (the camera-plane reading of the stated `10 um` at the `13.56x` working magnification, i.e. `0.74 um` in the object plane) and a data-calibrated camera block. The `photon_gain 200-400` at `saturation_level 2.0` stated here was the second-pass parameterisation; the fourth pass rescaled the same measured `0.46 DN/e-` budget to `photon_gain 6-12` at `saturation_level 45-90` intensity units (see the fourth-pass section), which is what the published noisy config carries. The previous `8000-20000` overstated the photon budget by more than an order of magnitude. The shear value was later confirmed against the seam-band isotropy test.
 
 ## Dark-port physical model fit (2026-07-21, second pass)
 
@@ -227,14 +227,17 @@ Artifacts are under `external_data/processed/wechat_2026-07_15-34/reflection_def
 
 Following the visibility result, the engine gained an optional `extra_field_modifier` per frame (`simulate_capture` / `simulate_bundle`), a complex amplitude/phase map for defects that a pure height perturbation cannot represent. `scripts/render_reflection_scatter_defect_comparison.py` sweeps localized scattering defects (Gaussian support, `sigma 3 um`, correlated rough phase plus local amplitude change) through the calibrated dark-port radiometry and compares the differential peak with the real anomaly contrast (`122-140 DN` for `5/19/20.bmp`):
 
-| Local amplitude factor | Rough phase (rad) | Peak diff (DN) |
-| ---: | ---: | ---: |
-| 4 | 0.3-2.4 | 18-45 |
-| 8 | 0.6 | 100 |
-| 8 | 1.2 | 150 |
-| 16 | any | 251 (clipped) |
+The sweep is parameterised in absolute scattering amplitude (invariant to the configured smooth-lens amplitude; the script derives the multiplier from the loaded config). Re-run against the published sixth-pass config (`lens_amplitude 0.02`, seam-profile-fitted rim, exposure calibration from the current dark-port fit):
 
-Reading: with the lens specular amplitude at `0.1` (fixture `4.0`), real-contrast defects correspond to local scattering amplitudes around `0.8-1.6` absolute (factor `8-16` over the smooth lens surface, i.e. `20-40%` of the fixture's scattering strength) with rough phase near `0.6-1.2 rad`. The saturation of the `x16` row shows the real `140 DN`-class anomalies sit below the clipping regime, bounding the plausible defect scattering amplitude from above. These ranges are the recommended defect-injection parameters for future dark-port synthetic datasets: a scattering component in this range must accompany any height component, whose own contribution is bounded at about `15.5 DN/um`.
+| Absolute scatter amplitude | Rough phase (rad) | Peak diff (DN) |
+| ---: | ---: | ---: |
+| 0.20 | 0.3-2.4 | 84-98 |
+| 0.25 | 0.3-1.2 | 149-153 |
+| 0.25 | 2.4 | 130 |
+| 0.30 | 0.3-2.4 | 187-220 |
+| 0.40 | any | 250 (clipped) |
+
+Reading: real-contrast (`122-140 DN`) defects correspond to an absolute local scattering amplitude of about `0.22-0.27`, i.e. `11-13x` the smooth lens surface (`0.02`) or `5-7%` of the fixture's scattering strength (`4.0`), with rough phase `0.3-2.4 rad` (weak dependence). The clipping of the `0.4` row shows real anomalies stay below saturation, bounding the amplitude from above. These are the recommended defect-injection parameters for dark-port synthetic datasets: a scattering component in this range must accompany any height component, whose own contribution is bounded at about `15.5 DN/um`. Note the absolute values are tied to the current exposure calibration (recorded in the script's summary.json alongside the fitted scale); an earlier version of this table quoted `0.8-1.6` under the pre-seam-fit calibration and is superseded.
 
 Artifacts are under `external_data/processed/wechat_2026-07_15-34/reflection_scatter_defect_comparison/`.
 

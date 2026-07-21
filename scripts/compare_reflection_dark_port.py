@@ -161,6 +161,30 @@ def _region_levels(image: np.ndarray, rho: np.ndarray) -> dict[str, float]:
     }
 
 
+def load_exposure_calibration(root: Path) -> tuple[float, float]:
+    """Exposure scale (DN per intensity unit) and dark offset from the model fit.
+
+    Downstream seam/defect scripts share this calibration; fail with a clear
+    instruction instead of a bare traceback when the fit has not been run yet.
+    """
+
+    summary_path = (
+        root
+        / "external_data"
+        / "processed"
+        / "wechat_2026-07_15-34"
+        / "reflection_darkport_model_fit"
+        / "summary.json"
+    )
+    if not summary_path.is_file():
+        raise SystemExit(
+            f"Missing exposure calibration: {summary_path}\n"
+            "Run scripts/compare_reflection_dark_port.py first to produce the dark-port model fit."
+        )
+    best = json.loads(summary_path.read_text(encoding="utf-8"))["best_by_total_score"]
+    return float(best["exposure_scale_dn_per_unit"]), float(best["dark_offset_dn"])
+
+
 def _image_corr(real: np.ndarray, sim: np.ndarray, mask: np.ndarray) -> float:
     a = np.asarray(real[mask], dtype=np.float64)
     b = np.asarray(sim[mask], dtype=np.float64)

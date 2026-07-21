@@ -133,8 +133,12 @@ def main(argv: list[str] | None = None) -> int:
         interior = image[rho <= 0.85].astype(np.float64)
         real_refs[name] = float(np.quantile(interior, 0.999) - np.median(interior))
 
+    # Sweep in absolute scattering amplitude so the calibration is invariant to
+    # the configured smooth-lens amplitude (the multiplier depends on it).
+    lens_amplitude = float(cfg.capture_engine_params["reflectance"]["lens_amplitude"])
+    absolute_amplitudes = (0.2, 0.25, 0.3, 0.4)
+    amplitude_factors = tuple(round(a / lens_amplitude, 2) for a in absolute_amplitudes)
     rough_values = (0.3, 0.6, 1.2, 2.4)
-    amplitude_factors = (4.0, 8.0, 16.0)
     records: list[dict[str, Any]] = []
     example_maps: dict[str, np.ndarray] = {}
     for amplitude_factor in amplitude_factors:
@@ -177,10 +181,10 @@ def main(argv: list[str] | None = None) -> int:
     fig = plt.figure(figsize=(17, 9), constrained_layout=True)
     grid = fig.add_gridspec(2, 5)
     show = [
-        ("amp4_rough0.6", "amplitude x4, 0.6 rad"),
-        ("amp8_rough0.6", "amplitude x8, 0.6 rad"),
-        ("amp8_rough1.2", "amplitude x8, 1.2 rad"),
-        ("amp16_rough1.2", "amplitude x16, 1.2 rad"),
+        (f"amp{amplitude_factors[1]:g}_rough0.6", f"|A|={absolute_amplitudes[1]:g}, 0.6 rad"),
+        (f"amp{amplitude_factors[2]:g}_rough0.6", f"|A|={absolute_amplitudes[2]:g}, 0.6 rad"),
+        (f"amp{amplitude_factors[2]:g}_rough1.2", f"|A|={absolute_amplitudes[2]:g}, 1.2 rad"),
+        (f"amp{amplitude_factors[3]:g}_rough1.2", f"|A|={absolute_amplitudes[3]:g}, 1.2 rad"),
     ]
     for column, (label, title) in enumerate(show):
         ax = fig.add_subplot(grid[0, column])
@@ -195,14 +199,16 @@ def main(argv: list[str] | None = None) -> int:
     ax_real.axis("off")
 
     ax_curve = fig.add_subplot(grid[1, :3])
-    for amplitude_factor, color in zip(amplitude_factors, ("#4878a8", "#6aa870", "#b06060")):
+    for amplitude_factor, absolute, color in zip(
+        amplitude_factors, absolute_amplitudes, ("#4878a8", "#6aa870", "#b06060", "#8060a8")
+    ):
         subset = [r for r in records if r["amplitude_factor"] == amplitude_factor]
         ax_curve.plot(
             [r["rough_rad"] for r in subset],
             [r["defect_peak_diff_dn"] for r in subset],
             "o-",
             color=color,
-            label=f"amplitude x{amplitude_factor:g}",
+            label=f"|A|={absolute:g} (x{amplitude_factor:g} lens)",
         )
     band = [min(real_refs.values()), max(real_refs.values())]
     ax_curve.axhspan(band[0], band[1], color="#c9a04e", alpha=0.25, label="real anomaly contrast 5/19/20.bmp")
@@ -215,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
 
     ax_note = fig.add_subplot(grid[1, 3:])
     ax_note.axis("off")
-    lens_amplitude = 0.1
+    background_amplitude = float(cfg.capture_engine_params["reflectance"]["background_amplitude"])
     matching = [
         r for r in records if band[0] * 0.8 <= r["defect_peak_diff_dn"] <= band[1] * 1.25
     ]
@@ -226,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
     height_equivalent = (
         "height-only pit (260 nm, full wrap): peak 4 DN\n"
         f"real anomaly contrast: {band[0]:.0f}-{band[1]:.0f} DN\n"
-        f"lens specular amplitude: {lens_amplitude:g} (fixture: 4.0)\n"
+        f"lens specular amplitude: {lens_amplitude:g} (fixture: {background_amplitude:g})\n"
         "candidates inside the real contrast band:\n"
         f"{matching_text}"
     )
@@ -244,6 +250,8 @@ def main(argv: list[str] | None = None) -> int:
         "exposure_scale_dn_per_unit": scale,
         "dark_offset_dn": offset,
         "defect_sigma_um": float(args.defect_sigma_um),
+        "lens_amplitude": lens_amplitude,
+        "absolute_scatter_amplitudes": [float(a) for a in absolute_amplitudes],
         "real_anomaly_contrast_dn": real_refs,
         "records": records,
     }

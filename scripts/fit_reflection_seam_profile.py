@@ -26,7 +26,7 @@ for path in (SRC, SCRIPTS):
         sys.path.insert(0, str(path))
 
 from compare_reflection_capture import _physical_radial_grid  # noqa: E402
-from compare_reflection_dark_port import _load_real_crops_dn  # noqa: E402
+from compare_reflection_dark_port import _load_real_crops_dn, load_exposure_calibration  # noqa: E402
 from mini_grin_rebuild.core.configs import load_experiment_config  # noqa: E402
 from mini_grin_rebuild.data.virtual_objects import microlens_reference  # noqa: E402
 from mini_grin_rebuild.simulation.factory import create_simulation_engine  # noqa: E402
@@ -76,18 +76,7 @@ def main() -> int:
 
     cfg0 = load_experiment_config(ROOT / "configs" / "reflection_microlens520_actual.json").simulation
     sim_rho = _physical_radial_grid(cfg0)
-    fit_meta = json.loads(
-        (
-            ROOT
-            / "external_data"
-            / "processed"
-            / "wechat_2026-07_15-34"
-            / "reflection_darkport_model_fit"
-            / "summary.json"
-        ).read_text(encoding="utf-8")
-    )["best_by_total_score"]
-    scale = float(fit_meta["exposure_scale_dn_per_unit"])
-    offset = float(fit_meta["dark_offset_dn"])
+    scale, offset = load_exposure_calibration(ROOT)
 
     bins = np.arange(0.82, 1.30, 0.004, dtype=np.float32)
     centers = (0.5 * (bins[:-1] + bins[1:]) - 1.0) * 109.71
