@@ -58,8 +58,9 @@ def _freeze_physics_to_ideal(physics: DifferentiableGradientLayer) -> None:
 def _wrap_height(cfg) -> float:
     import math
 
-    phase_scale = (2.0 * math.pi / cfg.wavelength) * (cfg.n_object - cfg.n_air)
-    return float((math.pi * cfg.wrap_safety) / max(phase_scale, 1e-12))
+    from mini_grin_rebuild.physics.phase import phase_scale
+
+    return float((math.pi * cfg.wrap_safety) / max(phase_scale(cfg), 1e-12))
 
 
 def _radial_grid(h: int, w: int, *, device: torch.device, dtype: torch.dtype) -> torch.Tensor:

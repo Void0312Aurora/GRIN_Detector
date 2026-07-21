@@ -85,17 +85,23 @@ def spherical_cap(cfg: SimulationConfig) -> np.ndarray:
         blended = (1.0 - blend_zone) * profile + blend_zone * smoothed
         height = np.interp(rr, r_axis, blended)
 
-    shoulder_height = float(getattr(cfg, "seam_shoulder_height_um", 0.0) or 0.0)
+    def _length(name: str, default: float) -> float:
+        # `or`-style fallbacks would swallow a legitimate 0.0 (e.g. a shoulder
+        # centred exactly on the seam); only None falls back to the default.
+        value = getattr(cfg, name, default)
+        return default if value is None else float(value)
+
+    shoulder_height = _length("seam_shoulder_height_um", 0.0)
     if shoulder_height != 0.0:
-        shoulder_offset = float(getattr(cfg, "seam_shoulder_offset_um", 5.0) or 5.0)
-        shoulder_width = max(float(getattr(cfg, "seam_shoulder_width_um", 4.0) or 4.0), 1e-6)
+        shoulder_offset = _length("seam_shoulder_offset_um", 5.0)
+        shoulder_width = max(_length("seam_shoulder_width_um", 4.0), 1e-6)
         height = height + shoulder_height * np.exp(
             -0.5 * ((rr - (aperture_radius + shoulder_offset)) / shoulder_width) ** 2
         )
-    trench_depth = float(getattr(cfg, "seam_trench_depth_um", 0.0) or 0.0)
+    trench_depth = _length("seam_trench_depth_um", 0.0)
     if trench_depth != 0.0:
-        trench_offset = float(getattr(cfg, "seam_trench_offset_um", 4.0) or 4.0)
-        trench_width = max(float(getattr(cfg, "seam_trench_width_um", 3.0) or 3.0), 1e-6)
+        trench_offset = _length("seam_trench_offset_um", 4.0)
+        trench_width = max(_length("seam_trench_width_um", 3.0), 1e-6)
         height = height - trench_depth * np.exp(
             -0.5 * ((rr - (aperture_radius - trench_offset)) / trench_width) ** 2
         )
