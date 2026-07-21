@@ -125,20 +125,19 @@ class OpticalLeakageLiteEngine:
     def _sample_reflectance_params(self, rng: np.random.Generator) -> dict[str, Any]:
         p = self.reflectance_cfg
         rim_width = max(0.5, sample_range(rng, p.get("rim_width_px"), 4.0))
+        background_rough = max(0.0, sample_range(rng, p.get("background_phase_rough_rad"), 0.0))
         return {
             "enabled": bool(p.get("enabled", bool(p))),
             "lens_amplitude": max(0.0, sample_range(rng, p.get("lens_amplitude"), 1.0)),
             "background_amplitude": max(0.0, sample_range(rng, p.get("background_amplitude"), 1.0)),
-            "background_phase_rough_rad": max(
-                0.0, sample_range(rng, p.get("background_phase_rough_rad"), 0.0)
-            ),
+            "background_phase_rough_rad": background_rough,
             "background_texture_sigma_px": max(
                 0.0, sample_range(rng, p.get("background_texture_sigma_px"), 1.5)
             ),
             "edge_softness_px": max(0.1, sample_range(rng, p.get("edge_softness_px"), 1.5)),
             # Per-lens surface micro-roughness inside the cap (polishing/molding
-            # residual and contamination film); isotropic, a few nm height
-            # equivalent, redrawn per capture.
+            # residual and contamination film); a static surface property drawn
+            # once per capture and shared across coherence realizations.
             "lens_phase_rough_rad": max(0.0, sample_range(rng, p.get("lens_phase_rough_rad"), 0.0)),
             "lens_texture_sigma_px": max(0.3, sample_range(rng, p.get("lens_texture_sigma_px"), 2.0)),
             # Additive weak scattering component of the lens surface, coexisting
@@ -160,15 +159,11 @@ class OpticalLeakageLiteEngine:
             # the background field, producing the observed common-mode bands.
             "rim_coherent_amplitude": max(0.0, sample_range(rng, p.get("rim_coherent_amplitude"), 0.0)),
             # Seam roughness: a chipped/glued seam is many radians rough, which
-            # kills its coherent (ring-diffraction) component; defaults to the
-            # background roughness for backward compatibility.
+            # kills its coherent (ring-diffraction) component; when absent it
+            # reuses the background roughness sample (no extra rng draw).
             "rim_phase_rough_rad": max(
                 0.0,
-                sample_range(
-                    rng,
-                    p.get("rim_phase_rough_rad"),
-                    sample_range(rng, p.get("background_phase_rough_rad"), 0.0),
-                ),
+                sample_range(rng, p.get("rim_phase_rough_rad"), background_rough),
             ),
             "rim_width_px": rim_width,
             # The seam band is asymmetric in reality: a sharp inner edge at the cap
@@ -212,8 +207,15 @@ class OpticalLeakageLiteEngine:
         shape: tuple[int, int],
         params: Mapping[str, Any],
         point_positions: tuple[np.ndarray, np.ndarray] | None = None,
+        static_lens_fields: Mapping[str, np.ndarray] | None = None,
     ) -> np.ndarray | None:
-        """Amplitude/phase map separating the specular lens cap from the scattering fixture."""
+        """Amplitude/phase map separating the specular lens cap from the scattering fixture.
+
+        Background and rim rough phases are redrawn per coherence realization
+        (ergodic model of finite illumination coherence over a many-radian
+        rough surface); the weak lens-surface texture is a static property and
+        must be supplied via ``static_lens_fields`` so it survives averaging.
+        """
 
         if not bool(params.get("enabled", False)):
             return None
@@ -278,12 +280,8 @@ class OpticalLeakageLiteEngine:
                 rim_rough * self._normalized_random_field(rng, shape, sigma_x_px=sigma, sigma_y_px=sigma)
             )
             phase_total = rim_phase if phase_total is None else phase_total + rim_phase
-        if lens_rough > 0.0:
-            lens_sigma = float(params["lens_texture_sigma_px"])
-            lens_phase = lens_weight * (
-                lens_rough
-                * self._normalized_random_field(rng, shape, sigma_x_px=lens_sigma, sigma_y_px=lens_sigma)
-            )
+        if lens_rough > 0.0 and static_lens_fields is not None:
+            lens_phase = lens_weight * (lens_rough * static_lens_fields["lens_rough_basis"])
             phase_total = lens_phase if phase_total is None else phase_total + lens_phase
         if phase_total is not None:
             modifier = amplitude * np.exp(1j * phase_total)
@@ -298,10 +296,10 @@ class OpticalLeakageLiteEngine:
                 rim_coherent * coherent_ring
             ).astype(np.complex64)
         lens_scatter = float(params.get("lens_scatter_amplitude", 0.0))
-        if lens_scatter > 0.0:
-            lens_sigma = float(params["lens_texture_sigma_px"])
-            scatter_phase = float(params.get("lens_scatter_phase_rad", 3.0)) * self._normalized_random_field(
-                rng, shape, sigma_x_px=lens_sigma, sigma_y_px=lens_sigma
+        if lens_scatter > 0.0 and static_lens_fields is not None:
+            scatter_phase = (
+                float(params.get("lens_scatter_phase_rad", 3.0))
+                * static_lens_fields["lens_scatter_basis"]
             )
             modifier = modifier + (
                 lens_scatter * lens_weight * np.exp(1j * scatter_phase)
@@ -712,7 +710,8 @@ class OpticalLeakageLiteEngine:
         undifferentiated field (imperfect postselection extinction).
         fourier_tilt: the shear element acts in the Fourier plane, so the two
         polarisation copies differ by a tilt; the dark port then multiplies the
-        image field by ``2i*sin(pi*q*r + phase)`` plus the same leakage term.
+        image field by ``2i*sin(2*pi*q*r + phase)`` plus the same leakage term,
+        where ``q`` is ``fringe_cycles_per_frame`` in frame units.
         """
 
         shift = self._shift_complex_x if axis == "x" else self._shift_complex_y
@@ -894,25 +893,57 @@ class OpticalLeakageLiteEngine:
         if not bool(params.get("enabled", False)):
             return [None]
         count = max(1, int(params.get("speckle_realizations", 1)))
+
         # Dust/micro-pit positions are a fixed property of the lens under test:
         # draw them once per capture; only their speckle phase varies with the
-        # coherence realization.
+        # coherence realization. Direct polar sampling is uniform over the
+        # disc, consumes a fixed number of draws, and cannot hang for small
+        # apertures (the rejection loop it replaces could).
         point_positions: tuple[np.ndarray, np.ndarray] | None = None
         point_count = int(params.get("lens_point_scatter_count", 0))
         if point_count > 0:
             h, w = shape
-            radius_px = float(getattr(self.cfg, "lens_radius_fraction", 1.0) or 1.0) * 0.5 * min(h, w)
-            ys: list[int] = []
-            xs: list[int] = []
-            while len(ys) < point_count:
-                y = float(rng.uniform(0, h))
-                x = float(rng.uniform(0, w))
-                if (y - 0.5 * (h - 1)) ** 2 + (x - 0.5 * (w - 1)) ** 2 <= (0.97 * radius_px) ** 2:
-                    ys.append(int(y))
-                    xs.append(int(x))
-            point_positions = (np.asarray(ys, dtype=np.int64), np.asarray(xs, dtype=np.int64))
+            fraction = getattr(self.cfg, "lens_radius_fraction", 1.0)
+            fraction = 1.0 if fraction is None else float(fraction)
+            radius_px = max(fraction, 0.0) * 0.5 * min(h, w)
+            if radius_px >= 1.0:
+                radial = 0.97 * radius_px * np.sqrt(rng.random(point_count))
+                theta = 2.0 * np.pi * rng.random(point_count)
+                ys = np.clip(
+                    np.round(0.5 * (h - 1) + radial * np.sin(theta)).astype(np.int64), 0, h - 1
+                )
+                xs = np.clip(
+                    np.round(0.5 * (w - 1) + radial * np.cos(theta)).astype(np.int64), 0, w - 1
+                )
+                point_positions = (ys, xs)
+
+        # Static (per-capture) lens-surface texture fields shared by every
+        # coherence realization: polishing/molding residual and contamination
+        # scattering are fixed surface properties, so their contribution must
+        # not be averaged away as K grows.
+        static_lens_fields: dict[str, np.ndarray] | None = None
+        lens_sigma = float(params["lens_texture_sigma_px"])
+        needs_rough = float(params.get("lens_phase_rough_rad", 0.0)) > 0.0
+        needs_scatter = float(params.get("lens_scatter_amplitude", 0.0)) > 0.0
+        if needs_rough or needs_scatter:
+            static_lens_fields = {}
+            if needs_rough:
+                static_lens_fields["lens_rough_basis"] = self._normalized_random_field(
+                    rng, shape, sigma_x_px=lens_sigma, sigma_y_px=lens_sigma
+                )
+            if needs_scatter:
+                static_lens_fields["lens_scatter_basis"] = self._normalized_random_field(
+                    rng, shape, sigma_x_px=lens_sigma, sigma_y_px=lens_sigma
+                )
+
         return [
-            self._reflectance_modifier(rng, shape, params, point_positions=point_positions)
+            self._reflectance_modifier(
+                rng,
+                shape,
+                params,
+                point_positions=point_positions,
+                static_lens_fields=static_lens_fields,
+            )
             for _ in range(count)
         ]
 

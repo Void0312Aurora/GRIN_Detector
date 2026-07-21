@@ -633,6 +633,106 @@ class TestOpticalLeakageLiteEngine(unittest.TestCase):
             atol=1e-7,
         )
 
+    def test_lens_texture_is_static_across_coherence_realizations(self) -> None:
+        def _capture(realizations: int):
+            cfg = SimulationConfig(
+                grid_size=64,
+                dx=0.39,
+                noise_level=0.0,
+                lens_radius_fraction=0.8,
+                capture_engine="optical_leakage_lite",
+                capture_engine_params={
+                    "defocus_strength": 0.0,
+                    "aperture_sigma_freq": 0.08,
+                    "raw_blur_sigma_px": 0.0,
+                    "dic_blur_sigma_px": 0.0,
+                    "shear_px": 1.0,
+                    "reflectance": {
+                        "enabled": True,
+                        "lens_amplitude": 1.0,
+                        "background_amplitude": 0.0,
+                        "background_phase_rough_rad": 0.0,
+                        "lens_phase_rough_rad": 0.4,
+                        "lens_scatter_amplitude": 0.1,
+                        "lens_texture_sigma_px": 3.0,
+                        "speckle_realizations": realizations,
+                    },
+                },
+            )
+            return create_simulation_engine(cfg).simulate_capture(
+                np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32),
+                rng=np.random.default_rng(21),
+            )
+
+        # With only static lens texture (no per-realization randomness), the
+        # K-average must equal the single realization bit for bit.
+        single = _capture(1)
+        averaged = _capture(8)
+        for key in ("I_x", "I_y", "I_raw"):
+            np.testing.assert_allclose(
+                averaged.channels[key], single.channels[key], rtol=1e-5, atol=1e-7
+            )
+
+    def test_point_scatter_sampling_terminates_for_small_aperture(self) -> None:
+        cfg = SimulationConfig(
+            grid_size=64,
+            dx=0.39,
+            noise_level=0.0,
+            lens_radius_fraction=0.05,
+            capture_engine="optical_leakage_lite",
+            capture_engine_params={
+                "defocus_strength": 0.0,
+                "aperture_sigma_freq": 0.08,
+                "raw_blur_sigma_px": 0.0,
+                "dic_blur_sigma_px": 0.0,
+                "shear_px": 1.0,
+                "reflectance": {
+                    "enabled": True,
+                    "lens_amplitude": 1.0,
+                    "background_amplitude": 1.0,
+                    "background_phase_rough_rad": 0.0,
+                    "lens_point_scatter_count": 16,
+                    "lens_point_scatter_amplitude": 0.5,
+                },
+            },
+        )
+        capture = create_simulation_engine(cfg).simulate_capture(
+            np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32),
+            rng=np.random.default_rng(3),
+        )
+        self.assertTrue(np.isfinite(capture.channels["I_raw"]).all())
+
+    def test_fourier_tilt_fringe_count_matches_configuration(self) -> None:
+        cycles = 4.0
+        cfg = SimulationConfig(
+            grid_size=64,
+            dx=0.39,
+            noise_level=0.0,
+            capture_engine="optical_leakage_lite",
+            capture_engine_params={
+                "defocus_strength": 0.0,
+                "aperture_sigma_freq": 0.08,
+                "raw_blur_sigma_px": 0.0,
+                "dic_blur_sigma_px": 0.0,
+                "shear_px": 1.0,
+                "dark_port": {
+                    "enabled": True,
+                    "mode": "fourier_tilt",
+                    "fringe_cycles_per_frame": cycles,
+                    "fringe_phase_rad": 0.3,
+                    "fringe_angle_deg": 0.0,
+                },
+            },
+        )
+        capture = create_simulation_engine(cfg).simulate_capture(
+            np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32),
+            rng=np.random.default_rng(5),
+        )
+        column_means = np.mean(np.asarray(capture.channels["I_x"], dtype=np.float64), axis=0)
+        spectrum = np.abs(np.fft.rfft(column_means - np.mean(column_means)))
+        # Intensity of sin^2 oscillates at twice the field fringe frequency.
+        self.assertEqual(int(np.argmax(spectrum[1:])) + 1, int(2 * cycles))
+
     def test_reflectance_map_separates_lens_and_background(self) -> None:
         cfg = SimulationConfig(
             grid_size=64,
