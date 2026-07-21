@@ -15,6 +15,7 @@ from mini_grin_rebuild.models.checkpoint import infer_checkpoint_info, load_chec
 from mini_grin_rebuild.models.unetpp import UNetPP
 from mini_grin_rebuild.physics.factory import create_forward_model, freeze_forward_model
 from mini_grin_rebuild.physics.layer import DifferentiableGradientLayer
+from mini_grin_rebuild.physics.phase import phase_scale
 from mini_grin_rebuild.reconstruction import (
     reconstruct_defect_coarse_prior,
     reconstruct_defect_first_order_poisson,
@@ -146,8 +147,8 @@ def _prepare_inputs(
 def _wrap_height(cfg) -> float:
     import math
 
-    phase_scale = (2.0 * math.pi / cfg.wavelength) * (cfg.n_object - cfg.n_air)
-    return float((math.pi * cfg.wrap_safety) / max(phase_scale, 1e-12))
+    scale = phase_scale(cfg)
+    return float((math.pi * cfg.wrap_safety) / max(scale, 1e-12))
 
 
 def _radial_grid(h: int, w: int, *, device: torch.device, dtype: torch.dtype) -> torch.Tensor:
@@ -206,10 +207,7 @@ def _binary_sign_t(values: torch.Tensor, fallback: torch.Tensor | float = 1.0) -
 
 def _phase_gradients_hw(cfg: ExperimentConfig, height_chw: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     height = height_chw.squeeze(0)
-    phase_scale = (2.0 * np.pi / float(cfg.simulation.wavelength)) * (
-        float(cfg.simulation.n_object) - float(cfg.simulation.n_air)
-    )
-    phase = height * float(phase_scale)
+    phase = height * float(phase_scale(cfg.simulation))
     grad_y, grad_x = torch.gradient(
         phase,
         spacing=(float(cfg.simulation.dx), float(cfg.simulation.dx)),

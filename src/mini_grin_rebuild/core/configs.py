@@ -39,15 +39,30 @@ class SimulationConfig:
     dx: float = 0.39
     gradient_backend: str = "finite"  # "finite" or "spectral"
     wavelength: float = 0.6328
+    phase_mode: str = "transmission"  # "transmission" or "reflection"
+    reflection_incidence_angle_deg: float = 0.0
     n_object: float = 1.52
     n_air: float = 1.0
+    numerical_aperture: float = 0.0
     noise_level: float = 0.005
     amplitude: float = 1.0
     height_scale: float = 250.0
     wrap_safety: float = 0.8
     # Surface / scene presets.
-    scene: str = "legacy"  # "legacy" or "microlens_srt"
+    scene: str = "legacy"  # "legacy", "microlens_srt", or "microlens_spherical_cap"
     lens_radius_fraction: float = 1.0
+    lens_curvature_radius_um: float | None = None
+    lens_sag_um: float | None = None
+    # Seam relief: the moulded cap-substrate transition is not a sharp corner
+    # but a fillet with an annular shoulder; the dark port renders its slope
+    # structure as the common-mode bands observed around every real lens.
+    seam_fillet_width_um: float = 0.0
+    seam_shoulder_height_um: float = 0.0
+    seam_shoulder_offset_um: float = 5.0
+    seam_shoulder_width_um: float = 4.0
+    seam_trench_depth_um: float = 0.0
+    seam_trench_offset_um: float = 4.0
+    seam_trench_width_um: float = 3.0
     standard_residual_wrap_frac: float = 0.5
     defect_sigma_min_um: float = 1.0
     defect_sigma_max_um: float = 5.0

@@ -5,6 +5,7 @@ from typing import Any, Mapping
 import numpy as np
 
 from mini_grin_rebuild.core.configs import SimulationConfig
+from mini_grin_rebuild.physics.phase import phase_model_meta
 from mini_grin_rebuild.simulation.engines.ideal_gradient import phase_from_height
 from mini_grin_rebuild.simulation.transforms import build_transform_pipeline
 from mini_grin_rebuild.simulation.transforms.base import CaptureTransform, TransformContext
@@ -153,6 +154,7 @@ class InstrumentLiteEngine:
             "engine_name": self.name,
             "engine_version": self.version,
             "base_model": "squared_phase_gradient",
+            "phase_model": phase_model_meta(self.cfg),
             "pipeline": [transform.name for transform in self.transforms],
             "params": self.params,
         }

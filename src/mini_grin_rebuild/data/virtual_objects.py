@@ -7,6 +7,7 @@ from typing import Dict, Tuple
 import numpy as np
 
 from mini_grin_rebuild.core.configs import SimulationConfig
+from mini_grin_rebuild.physics.phase import phase_scale
 
 
 @dataclass
@@ -33,7 +34,83 @@ def spherical_bowl(cfg: SimulationConfig, radius_fraction: float = 0.7) -> np.nd
     return np.sqrt(bowl) * cfg.height_scale
 
 
+def spherical_cap(cfg: SimulationConfig) -> np.ndarray:
+    """Physical spherical cap with zero height at its clear-aperture edge."""
+
+    radius = getattr(cfg, "lens_curvature_radius_um", None)
+    sag = getattr(cfg, "lens_sag_um", None)
+    if radius is None or sag is None:
+        raise ValueError(
+            "microlens_spherical_cap requires lens_curvature_radius_um and lens_sag_um"
+        )
+    radius = float(radius)
+    sag = float(sag)
+    if radius <= 0.0 or sag <= 0.0 or sag >= 2.0 * radius:
+        raise ValueError("spherical-cap geometry requires radius > 0 and 0 < sag < 2*radius")
+
+    aperture_radius = math.sqrt(max(2.0 * radius * sag - sag * sag, 0.0))
+    half_fov = 0.5 * float(cfg.grid_size) * float(cfg.dx)
+    if aperture_radius > half_fov + 1e-9:
+        raise ValueError(
+            f"Spherical-cap aperture radius {aperture_radius:.6g} exceeds half FOV {half_fov:.6g}"
+        )
+
+    coords = (np.arange(cfg.grid_size, dtype=np.float64) - 0.5 * (cfg.grid_size - 1)) * float(cfg.dx)
+    yy, xx = np.meshgrid(coords, coords, indexing="ij")
+    rr2 = xx**2 + yy**2
+    aperture = rr2 <= aperture_radius**2
+    height = np.zeros_like(rr2, dtype=np.float64)
+    height[aperture] = np.sqrt(np.maximum(radius**2 - rr2[aperture], 0.0)) - (radius - sag)
+
+    # Seam relief: replace the sharp cap-substrate corner by a fillet and add
+    # the annular shoulder/trench of the moulding meniscus. All lengths are in
+    # the same micrometre unit as dx.
+    rr = np.sqrt(rr2)
+    fillet_width = max(float(getattr(cfg, "seam_fillet_width_um", 0.0) or 0.0), 0.0)
+    if fillet_width > 0.0:
+        # 1-D radial smoothing of the profile in a band around the seam keeps
+        # the cap and far substrate untouched.
+        n_samples = 4096
+        r_axis = np.linspace(0.0, float(np.max(rr)) + fillet_width, n_samples)
+        profile = np.zeros_like(r_axis)
+        inside = r_axis <= aperture_radius
+        profile[inside] = np.sqrt(np.maximum(radius**2 - r_axis[inside] ** 2, 0.0)) - (radius - sag)
+        step = r_axis[1] - r_axis[0]
+        sigma_samples = max(fillet_width / step, 1e-6)
+        kernel_half = int(np.ceil(4.0 * sigma_samples))
+        kernel = np.exp(-0.5 * (np.arange(-kernel_half, kernel_half + 1) / sigma_samples) ** 2)
+        kernel = kernel / np.sum(kernel)
+        smoothed = np.convolve(np.pad(profile, kernel_half, mode="edge"), kernel, mode="valid")
+        blend_zone = np.exp(-0.5 * ((r_axis - aperture_radius) / (3.0 * fillet_width)) ** 2)
+        blended = (1.0 - blend_zone) * profile + blend_zone * smoothed
+        height = np.interp(rr, r_axis, blended)
+
+    def _length(name: str, default: float) -> float:
+        # `or`-style fallbacks would swallow a legitimate 0.0 (e.g. a shoulder
+        # centred exactly on the seam); only None falls back to the default.
+        value = getattr(cfg, name, default)
+        return default if value is None else float(value)
+
+    shoulder_height = _length("seam_shoulder_height_um", 0.0)
+    if shoulder_height != 0.0:
+        shoulder_offset = _length("seam_shoulder_offset_um", 5.0)
+        shoulder_width = max(_length("seam_shoulder_width_um", 4.0), 1e-6)
+        height = height + shoulder_height * np.exp(
+            -0.5 * ((rr - (aperture_radius + shoulder_offset)) / shoulder_width) ** 2
+        )
+    trench_depth = _length("seam_trench_depth_um", 0.0)
+    if trench_depth != 0.0:
+        trench_offset = _length("seam_trench_offset_um", 4.0)
+        trench_width = max(_length("seam_trench_width_um", 3.0), 1e-6)
+        height = height - trench_depth * np.exp(
+            -0.5 * ((rr - (aperture_radius - trench_offset)) / trench_width) ** 2
+        )
+    return height.astype(np.float32)
+
+
 def microlens_reference(cfg: SimulationConfig) -> np.ndarray:
+    if str(getattr(cfg, "scene", "legacy")) == "microlens_spherical_cap":
+        return spherical_cap(cfg)
     radius_fraction = float(getattr(cfg, "lens_radius_fraction", 1.0))
     return spherical_bowl(cfg, radius_fraction=radius_fraction)
 
@@ -147,7 +224,7 @@ def scratch_defect(
 
 def build_triplet(cfg: SimulationConfig) -> Dict[str, VirtualObject]:
     scene = str(getattr(cfg, "scene", "legacy"))
-    if scene == "microlens_srt":
+    if scene in {"microlens_srt", "microlens_spherical_cap"}:
         reference = VirtualObject(cfg, microlens_reference(cfg))
         standard = VirtualObject(cfg, microlens_standard(cfg))
     else:
@@ -168,8 +245,7 @@ def build_triplet(cfg: SimulationConfig) -> Dict[str, VirtualObject]:
 
 
 def _wrap_height(cfg: SimulationConfig) -> float:
-    scale = (2.0 * math.pi / cfg.wavelength) * (cfg.n_object - cfg.n_air)
-    return (math.pi * cfg.wrap_safety) / scale
+    return (math.pi * cfg.wrap_safety) / phase_scale(cfg)
 
 
 def _sigma_from_phys(cfg: SimulationConfig, sigma_phys_um: float) -> float:
@@ -184,6 +260,7 @@ __all__ = [
     "microlens_reference",
     "microlens_standard",
     "spherical_bowl",
+    "spherical_cap",
     "aspheric_surface",
     "defect_patch",
     "scratch_defect",
