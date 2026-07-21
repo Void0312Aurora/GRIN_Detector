@@ -72,24 +72,24 @@ class TestCLIPipeline(unittest.TestCase):
             for split in ("train", "val", "test"):
                 files = list((dataset_root / split).glob("*.npz"))
                 self.assertEqual(len(files), 1)
-                sample = np.load(files[0])
-                for key in (
-                    "diff_ix_st",
-                    "diff_iy_st",
-                    "diff_ix_sr",
-                    "diff_iy_sr",
-                    "ix_standard",
-                    "iy_standard",
-                    "ix_reference",
-                    "iy_reference",
-                    "ix_test",
-                    "iy_test",
-                    "standard",
-                    "reference",
-                    "test",
-                    "defect",
-                ):
-                    self.assertIn(key, sample)
+                with np.load(files[0]) as sample:
+                    for key in (
+                        "diff_ix_st",
+                        "diff_iy_st",
+                        "diff_ix_sr",
+                        "diff_iy_sr",
+                        "ix_standard",
+                        "iy_standard",
+                        "ix_reference",
+                        "iy_reference",
+                        "ix_test",
+                        "iy_test",
+                        "standard",
+                        "reference",
+                        "test",
+                        "defect",
+                    ):
+                        self.assertIn(key, sample)
 
             # train (1 epoch)
             buf = io.StringIO()
