@@ -333,6 +333,8 @@ The dominant remaining seam residual is now diagnostic rather than radial: the s
 
 ## Apparatus correspondence (PRA 106, 023518)
 
+Dedicated instrument-parameter and optical-layout notes (Chinese): `docs/REFLECTION_APPARATUS_PARAMETERS.md`.
+
 The instrument follows the general weak-measurement differential imaging scheme: preselection, a weak shear coupling `U = exp(-i k_d A delta/2)`, and a postselection on the ancilla. The mapping to the current simulator is:
 
 | Apparatus concept | Simulator counterpart | Status |
