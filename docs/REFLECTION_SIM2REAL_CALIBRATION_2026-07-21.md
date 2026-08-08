@@ -158,6 +158,34 @@ the corrected config under the same expanded score:
 > validated working point** and must not be promoted to the actual config until
 > it passes the gate. Whether the search was misled by the same defect (it calls
 > the same `_score`) or the trade was made knowingly is not yet determined.
+>
+> **Re-run under the fixed scorer** (`analysis_outputs/reflection_sim2real_v4_gated/old_vs_visual/`,
+> same seed `20260721`, ensemble `4`, channel `I_x` and split manifest as the
+> original, from a clean tree at `742e5aa`):
+>
+> | Validation | Archived | Corrected | Verdict |
+> | --- | ---: | ---: | --- |
+> | Five-block CV | 7.259 +- 0.711 | 6.681 +- 1.785 | overlapping; not separable |
+> | Cross-date temporal | 9.462 | 4.012 | corrected better |
+> | Gate | - | - | **gate_fail, 5/5 metrics** |
+>
+> The blocked-CV gap the original reported as a `34.2%` reduction is not
+> reproducible once the unbounded term is capped and collinear terms are
+> renormalized: `7.259 +- 0.711` versus `6.681 +- 1.785` overlap within one
+> standard deviation, and the corrected model is now the *less* stable of the
+> two across folds. Only the single-fold temporal number still favours the
+> corrected config, and a single fold cannot carry a working-point decision.
+>
+> Gate detail from this re-run: radial RMSE `30.91 -> 46.46` (+50.3%), radial
+> corr `0.877 -> 0.621` (-29.2%), seam RMSE `37.43 -> 81.10` (+116.6%), seam
+> corr `0.921 -> 0.397` (-56.9%), low-pass aperture corr `0.805 -> 0.732`
+> (-9.1%).
+>
+> This is the disposition: the corrected config is a mechanism study that
+> established the four-lobe inner edge is real and reproducible, not a
+> calibrated working point. The angular work must be redone under the
+> constraint that seam profile correlation stays at or above the `0.864` this
+> project reached in the joint seam fit.
 
 Selected cross-date metrics (four-simulation common image unless marked
 "individual median") are:
