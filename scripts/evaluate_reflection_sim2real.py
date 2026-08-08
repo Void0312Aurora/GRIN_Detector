@@ -8,7 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 import matplotlib
 
@@ -428,6 +428,15 @@ def _relative_error(value: float, target: float, floor: float) -> float:
     return abs(float(value) - float(target)) / max(abs(float(target)), float(floor))
 
 
+# Per-term ceiling for the weighted sum.  Without it a single ratio-style term
+# can dominate the total: the interior fine-texture kurtosis of a model with a
+# near-empty interior reached 234 against a real 3.7, contributing 56% of that
+# model's whole score and burying every other term.  Terms are diagnostic of
+# "how wrong" only up to a point; beyond a few normalization units the exact
+# magnitude carries no additional modelling information.
+TERM_CEILING = 4.0
+
+
 def _periodic_phase_error_deg(value: float, target: float, period: float) -> float:
     half = 0.5 * float(period)
     return abs((float(value) - float(target) + half) % float(period) - half)
@@ -542,6 +551,8 @@ def _score(
             0.0,
         ),
     }
+    # Raw per-term weights.  These express relative importance *within* a
+    # family only; the family totals are renormalized below.
     weights = {
         "radial_rmse": 1.0,
         "seam_rmse": 1.0,
@@ -568,8 +579,90 @@ def _score(
         "interior_distribution_texture_coverage": 1.0,
         "interior_distribution_excess_pointiness": 1.0,
     }
-    total = float(sum(weights[key] * value for key, value in components.items()))
+    capped = {key: min(float(value), TERM_CEILING) for key, value in components.items()}
+    total = float(sum(_effective_weights(weights)[key] * value for key, value in capped.items()))
     return total, components
+
+
+# Terms are grouped by the physical property they measure, and each family is
+# renormalized to its own budget below.  Eight of the 24 terms describe interior
+# texture; ungrouped they carried 7.5 of 22.75 total weight, so a single
+# appearance property outvoted radial and seam profile fidelity combined.
+TERM_FAMILIES = {
+    "profile": (
+        ["radial_rmse", "seam_rmse"],
+        2.0,
+    ),
+    "rim_shape": (
+        ["rim_saturation", "rim_angular_cv", "rim_dipole", "edge_rise", "rim_fwhm"],
+        2.5,
+    ),
+    "fixture": (
+        ["fixture_corr_length", "fixture_contrast", "fixture_level"],
+        1.5,
+    ),
+    "levels": (
+        ["interior_level", "interior_tail"],
+        1.0,
+    ),
+    "inner_edge": (
+        [
+            "inner_edge_harmonic_spectrum",
+            "inner_edge_h4_phase",
+            "inner_edge_focus_coverage",
+            "inner_edge_peak_to_median",
+        ],
+        2.5,
+    ),
+    "interior_texture": (
+        [
+            "interior_common_fine_texture",
+            "interior_common_medium_texture",
+            "interior_common_texture_coverage",
+            "interior_common_texture_kurtosis",
+            "interior_common_spectral_centroid",
+            "interior_distribution_fine_texture",
+            "interior_distribution_texture_coverage",
+            "interior_distribution_excess_pointiness",
+        ],
+        2.0,
+    ),
+}
+
+
+def _effective_weights(raw: Mapping[str, float]) -> dict[str, float]:
+    """Renormalize each family so it contributes its family budget, not the
+    sum of however many collinear terms happen to describe it."""
+
+    effective: dict[str, float] = {}
+    for keys, budget in TERM_FAMILIES.values():
+        family_total = sum(float(raw[key]) for key in keys)
+        for key in keys:
+            effective[key] = float(budget) * float(raw[key]) / family_total
+    missing = set(raw) - set(effective)
+    if missing:
+        raise KeyError(f"score terms not assigned to a family: {sorted(missing)}")
+    return effective
+
+
+def _gate_summary(
+    rows: Iterable[Mapping[str, Any]],
+    labels: Iterable[str],
+) -> dict[str, Any]:
+    """Run the veto gate for every non-baseline model against the baseline."""
+
+    rows = list(rows)
+    labels = list(labels)
+    if "baseline" not in labels:
+        return {"verdict": "not_applicable", "note": "no baseline model in this run"}
+    baseline = [row for row in rows if row["model"] == "baseline"]
+    out: dict[str, Any] = {}
+    for label in labels:
+        if label == "baseline":
+            continue
+        candidate = [row for row in rows if row["model"] == label]
+        out[label] = _gate_verdict(baseline, candidate)
+    return out
 
 
 def _evaluate_fold(
@@ -619,8 +712,77 @@ def _evaluate_fold(
         "sim_distribution_median": sim_target["distribution_median"],
         "score": total_score,
         "score_components": score_components,
+        "gate_metrics": {key: float(profile[key]) for key in GATE_METRICS},
     }
     return result, np.median(calibrated, axis=0).astype(np.float32)
+
+
+# Raw profile-fidelity metrics that a composite score must never be allowed to
+# trade away silently.  "lower_is_better" fixes the comparison direction.
+GATE_METRICS = {
+    "radial_profile_rmse_dn": True,
+    "radial_profile_corr": False,
+    "seam_profile_rmse_dn": True,
+    "seam_profile_corr": False,
+    "lowpass_aperture_corr": False,
+}
+
+# A candidate may lose this much on a gate metric relative to the baseline
+# before it counts as a regression.  5% absorbs fold-to-fold noise without
+# absorbing the kind of change seen historically (seam corr 0.92 -> 0.46).
+GATE_TOLERANCE = 0.05
+
+
+def _gate_verdict(
+    baseline_folds: Iterable[Mapping[str, Any]],
+    candidate_folds: Iterable[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Per-metric veto on raw profile fidelity.
+
+    The composite score is a weighted mean, so a candidate can improve it while
+    degrading every raw profile metric -- which is exactly what happened when a
+    candidate improved the total by 71% while seam profile correlation fell from
+    0.92 to 0.46 across all 12 folds. Averaging cannot express "this must not
+    get worse", so the gate is evaluated outside the score.
+    """
+
+    base = list(baseline_folds)
+    cand = list(candidate_folds)
+    checks: list[dict[str, Any]] = []
+    for metric, lower_is_better in GATE_METRICS.items():
+        b = float(np.mean([float(f["gate_metrics"][metric]) for f in base]))
+        c = float(np.mean([float(f["gate_metrics"][metric]) for f in cand]))
+        if lower_is_better:
+            allowed = b * (1.0 + GATE_TOLERANCE)
+            regressed = c > allowed
+            relative = (c - b) / b if b else 0.0
+        else:
+            allowed = b * (1.0 - GATE_TOLERANCE)
+            regressed = c < allowed
+            relative = (b - c) / b if b else 0.0
+        checks.append(
+            {
+                "metric": metric,
+                "lower_is_better": bool(lower_is_better),
+                "baseline_mean": b,
+                "candidate_mean": c,
+                "allowed": float(allowed),
+                "relative_degradation": float(relative),
+                "regressed": bool(regressed),
+            }
+        )
+    failed = [c["metric"] for c in checks if c["regressed"]]
+    return {
+        "tolerance": GATE_TOLERANCE,
+        "checks": checks,
+        "regressed_metrics": failed,
+        "verdict": "gate_fail" if failed else "gate_pass",
+        "note": (
+            "A gate_fail means the candidate traded raw profile fidelity for "
+            "composite score. The composite score alone must not be used to "
+            "select a working point when this fails."
+        ),
+    }
 
 
 def _flatten(prefix: str, value: Any, out: dict[str, Any]) -> None:
@@ -776,6 +938,7 @@ def main(argv: list[str] | None = None) -> int:
             }
             for label in configs
         },
+        "gate": _gate_summary(rows, list(configs)),
         "folds": rows,
     }
 
@@ -808,6 +971,19 @@ def main(argv: list[str] | None = None) -> int:
     plt.close(fig)
 
     print(json.dumps(summary["aggregates"], indent=2), flush=True)
+    gate = summary.get("gate") or {}
+    for label, verdict in gate.items():
+        if not isinstance(verdict, dict) or "verdict" not in verdict:
+            continue
+        print(f"gate[{label}]: {verdict['verdict']}", flush=True)
+        for check in verdict.get("checks", []):
+            if check["regressed"]:
+                print(
+                    f"  REGRESSED {check['metric']}: "
+                    f"baseline {check['baseline_mean']:.4f} -> candidate {check['candidate_mean']:.4f} "
+                    f"({100.0 * check['relative_degradation']:.1f}% worse)",
+                    flush=True,
+                )
     print(args.output_dir / "summary.json", flush=True)
     print(args.output_dir / "fit_vs_holdout.png", flush=True)
     return 0
