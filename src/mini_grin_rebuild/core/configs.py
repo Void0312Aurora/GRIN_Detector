@@ -35,6 +35,9 @@ class PathsConfig:
 class SimulationConfig:
     capture_engine: str = "ideal_gradient"
     capture_engine_params: dict[str, Any] = field(default_factory=dict)
+    # Optional localized complex-field perturbation coupled to the synthetic
+    # height defect.  Empty/disabled preserves height-only legacy datasets.
+    defect_scattering: dict[str, Any] = field(default_factory=dict)
     grid_size: int = 512
     dx: float = 0.39
     gradient_backend: str = "finite"  # "finite" or "spectral"

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "description": "Retrospective time-blocked validation for the 24 dark-port BMP frames. Historical tuning saw all frames; this split is for leakage-aware internal comparison, not an independent external test.",
+  "calibration_blocks": [
+    ["13.bmp", "14.bmp", "15.bmp", "16.bmp"],
+    ["9.bmp", "5.bmp", "10.bmp", "11.bmp"],
+    ["6.bmp", "12.bmp", "7.bmp", "8.bmp"],
+    ["17.bmp", "18.bmp", "19.bmp", "20.bmp"],
+    ["1.bmp", "2.bmp", "3.bmp", "4.bmp"]
+  ],
+  "temporal_test": ["21.bmp", "22.bmp", "23.bmp", "24.bmp"],
+  "notes": [
+    "Frames 21-24 have 2026-03-27 mtimes; the calibration blocks have 2026-04-20 mtimes.",
+    "Frames 13 and 14 remain in one block because they share the localized stripe state.",
+    "A future acquisition batch is required for a genuinely independent test."
+  ]
+}
