@@ -124,6 +124,41 @@ the corrected config under the same expanded score:
 | Five-block retrospective CV | 16.719 | 10.995 | 34.2% |
 | Cross-date temporal check | 20.162 | 5.885 | 70.8% |
 
+> **RETRACTED 2026-08-09.** These two score reductions are artifacts of a
+> defective scorer and must not be cited. The evaluator's `_score` had an
+> unbounded `interior_common_texture_kurtosis` term: because the archived model
+> has a near-empty interior, its kurtosis reached `234` against a real `3.7`,
+> and that single term supplied `31.5` of the archived model's `55.9` temporal
+> points (56%). The apparent improvement measures mostly the removal of that
+> divergence, not better agreement. Two further defects compounded it: eight of
+> 24 terms describe interior texture and carried a third of the total weight,
+> and the weighted mean had no way to express "this must not get worse".
+>
+> Under the fixed scorer (per-term ceiling, family-renormalized weights) the same
+> recorded folds give archived `13.21` versus corrected `3.94` on the temporal
+> check -- the ordering survives, the magnitude does not. More importantly the
+> new veto gate **fails on all five raw fidelity metrics**, in this fair
+> comparison and in the legacy-baseline one:
+>
+> | Gate metric | Archived | Corrected | Change |
+> | --- | ---: | ---: | ---: |
+> | Radial profile RMSE (DN) | 31.30 | 47.76 | 52.6% worse |
+> | Radial profile corr | 0.859 | 0.589 | 31.4% worse |
+> | Seam profile RMSE (DN) | 43.84 | 83.28 | 90.0% worse |
+> | Seam profile corr | 0.868 | 0.370 | 57.4% worse |
+> | Low-pass aperture corr | 0.782 | 0.717 | 8.2% worse |
+>
+> The section below acknowledged only the single-fold seam RMSE cost
+> (`29.63 -> 51.69`). The regression is in fact systematic: all 12 folds, all
+> five metrics. The corrected config bought angular inner-edge structure by
+> giving up radial and seam profile fidelity, including the seam relief this
+> project had separately fitted to correlation `0.864`.
+>
+> Consequently `reflection_microlens520_sim2real_actual.json` is **not a
+> validated working point** and must not be promoted to the actual config until
+> it passes the gate. Whether the search was misled by the same defect (it calls
+> the same `_score`) or the trade was made knowingly is not yet determined.
+
 Selected cross-date metrics (four-simulation common image unless marked
 "individual median") are:
 
