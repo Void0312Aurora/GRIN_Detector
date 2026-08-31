@@ -255,6 +255,52 @@ Engine consequences, all under `reflectance`:
 
 Calibrated point (`lens 0.02 / scatter 0.05 @ 4 px / 240 points @ 1.0`): interior median `3.8 DN` (real `2-3`), interior p99.9 `14 DN` (real clean frames `8-11`), sector coherence `0.05` (real `0.02-0.11`), radial-profile fluctuation `0.12-0.24 DN` (real `0.43`, which includes real dust/defects). The refreshed full comparison gives aperture corr `0.788`, rim FWHM `11.8 um`, fixture contrast `0.54`. The former artificial ring structure and most of the dipole seam are gone from the log view; the remaining texture-density difference between simulated point specks and the real finer-grained interior is the next candidate, together with the fixture two-component texture.
 
+## Seventh pass: ordered inner edge and dense interior texture (2026-07-23)
+
+The next audit exposed a metric blind spot. The real linear image concentrates
+the brightest inner-edge pixels into four camera-fixed directions, while the
+candidate rendered a broad annulus. In log intensity, the real disk contains
+dense broadband texture, while the candidate median was flat and individual
+captures were dominated by isolated points. Radial RMSE, rim CV/dipole,
+interior median and `p99.9` could not distinguish these morphologies.
+
+The evaluator now keeps angular order explicitly (`H1-H8`, fourth-order phase,
+focus coverage and peak/median) and measures radially detrended interior texture
+(fine/medium standard deviation, dense-pixel coverage, kurtosis and 2-D spectral
+centroid). The deterministic model changes are:
+
+- a fourth-order camera-fixed inner-edge focus source, added after the common DIC
+  blur so edge width and interior texture no longer compete for one blur knob;
+- continuous multi-scale lens-scatter fields with common, capture-shared and
+  per-realization fractions;
+- a two-scale camera fixed-pattern residual with `20%` coordinate-locked energy
+  and `80%` capture-specific energy;
+- removal of the deterministic 180-point scatter population and the complete
+  rough rim annulus; the illumination dipole remains as a separate measured
+  first-order term.
+
+The post-blur focus source is an empirical unresolved
+polarization/illumination-coupling term. It fixes the observed intensity
+structure but is not evidence for a unique optical cause. Likewise, the fixed
+spatial residual represents the shared acquisition base without overriding the
+earlier finding that most interior texture energy is lens-specific and
+isotropic.
+
+Under the expanded score, the archived deterministic config versus the
+corrected config changes from `16.719 -> 10.995` on retrospective blocked CV and
+`20.162 -> 5.885` on the cross-date check. Cross-date common-image focus coverage
+is `0.562` versus `0.549` real, `H1` is `0.511` versus `0.512`, fourth-order phase
+is `88.67 deg` versus `89.84 deg`, and fine texture standard deviation is
+`0.681 DN` versus `0.631 DN`. Individual-median fine texture and dense coverage
+are `0.981 DN / 0.314` versus `1.063 DN / 0.303` real.
+
+The correction is not a global win on every metric. Radial RMSE is effectively
+unchanged (`29.74 -> 29.71 DN`) and seam RMSE worsens (`29.63 -> 51.69 DN`);
+the corrected rim is too narrow (`7.90 um` versus `13.17 um`) and still clips
+too often (`0.119` versus `0.048`). The next model step is therefore a broad,
+low-amplitude seam skirt that preserves the fitted four-lobe contrast, not a
+return to a uniformly bright annulus.
+
 ## Generalization check (2026-07-21)
 
 `scripts/validate_reflection_generalization.py` upgrades the in-sample fits to held-out validation, using a denser defocus/blur grid (9 x 7 candidates).

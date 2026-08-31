@@ -14,6 +14,18 @@ from mini_grin_rebuild.physics.phase import phase_scale
 class VirtualObject:
     config: SimulationConfig
     height_map: np.ndarray
+    field_modifier: np.ndarray | None = None
+
+    def __post_init__(self) -> None:
+        if self.field_modifier is None:
+            return
+        modifier = np.asarray(self.field_modifier)
+        if modifier.shape != np.asarray(self.height_map).shape:
+            raise ValueError(
+                "field_modifier must have the same shape as height_map: "
+                f"{modifier.shape} != {np.asarray(self.height_map).shape}"
+            )
+        self.field_modifier = modifier.astype(np.complex64, copy=False)
 
     @property
     def shape(self) -> Tuple[int, int]:
