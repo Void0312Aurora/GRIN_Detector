@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "description": "Dipole-separated angular seam, blur, and fixture-level interactions around the v2-search optimum. Temporal-test frames remain excluded.",
+  "candidates": [
+    {
+      "name": "best_v2_reference",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0
+      }
+    },
+    {
+      "name": "remove_dipole_tilt_0p7",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.7
+      }
+    },
+    {
+      "name": "remove_dipole_tilt_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.5
+      }
+    },
+    {
+      "name": "remove_dipole_tilt_0p35",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.35
+      }
+    },
+    {
+      "name": "remove_dipole_tilt_0p2",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.2
+      }
+    },
+    {
+      "name": "remove_dipole_angular_0p35_tilt_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.rim_angular_modulation_strength": 0.35,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.5
+      }
+    },
+    {
+      "name": "remove_dipole_angular_0p75_tilt_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.rim_angular_modulation_strength": 0.75,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.5
+      }
+    },
+    {
+      "name": "rim_0p25_remove_tilt_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.25,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.5
+      }
+    },
+    {
+      "name": "rim_0p0_remove_tilt_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.0,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.5
+      }
+    },
+    {
+      "name": "blur_5_remove_tilt_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 5.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.5
+      }
+    },
+    {
+      "name": "blur_7_remove_tilt_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 7.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.5
+      }
+    },
+    {
+      "name": "background_5_remove_tilt_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.5,
+        "simulation.capture_engine_params.reflectance.background_amplitude": 5.0
+      }
+    },
+    {
+      "name": "background_6_remove_tilt_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_angular_remove_dipole": true,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.5,
+        "simulation.capture_engine_params.reflectance.background_amplitude": 6.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "description": "Fixed-DN radiometry ablation for the selected optical model. Selection uses only April calibration blocks.",
+  "candidates": [
+    {
+      "name": "exposure_40_black_3",
+      "overrides": {
+        "simulation.capture_engine_params.camera.exposure_scale": 40.0
+      }
+    },
+    {
+      "name": "exposure_50_black_3",
+      "overrides": {
+        "simulation.capture_engine_params.camera.exposure_scale": 50.0
+      }
+    },
+    {
+      "name": "exposure_56_black_3",
+      "overrides": {
+        "simulation.capture_engine_params.camera.exposure_scale": 56.0
+      }
+    },
+    {
+      "name": "exposure_60_black_3",
+      "overrides": {
+        "simulation.capture_engine_params.camera.exposure_scale": 60.0
+      }
+    },
+    {
+      "name": "exposure_67_black_3",
+      "overrides": {
+        "simulation.capture_engine_params.camera.exposure_scale": 67.0
+      }
+    },
+    {
+      "name": "exposure_75_black_3",
+      "overrides": {
+        "simulation.capture_engine_params.camera.exposure_scale": 75.0
+      }
+    },
+    {
+      "name": "exposure_85_black_3",
+      "overrides": {
+        "simulation.capture_engine_params.camera.exposure_scale": 85.0
+      }
+    },
+    {
+      "name": "exposure_56_black_2",
+      "overrides": {
+        "simulation.capture_engine_params.camera.exposure_scale": 56.0,
+        "simulation.capture_engine_params.camera.black_level": 2.0
+      }
+    },
+    {
+      "name": "exposure_56_black_4",
+      "overrides": {
+        "simulation.capture_engine_params.camera.exposure_scale": 56.0,
+        "simulation.capture_engine_params.camera.black_level": 4.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "description": "Low-rim-amplitude and blur/tilt interactions around sim2real_v1. Temporal-test frames remain excluded from selection.",
+  "candidates": [
+    {
+      "name": "rim_amp_0p0",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.0
+      }
+    },
+    {
+      "name": "rim_amp_0p25",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.25
+      }
+    },
+    {
+      "name": "rim_amp_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5
+      }
+    },
+    {
+      "name": "rim_amp_0p75",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.75
+      }
+    },
+    {
+      "name": "rim_amp_1p0",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 1.0
+      }
+    },
+    {
+      "name": "rim_amp_1p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 1.5
+      }
+    },
+    {
+      "name": "rim_amp_0p0_blur_6",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.0,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0
+      }
+    },
+    {
+      "name": "rim_amp_0p5_blur_6",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0
+      }
+    },
+    {
+      "name": "rim_amp_1p0_blur_6",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 1.0,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0
+      }
+    },
+    {
+      "name": "rim_amp_1p0_tilt_0p35",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 1.0,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.35
+      }
+    },
+    {
+      "name": "rim_amp_1p0_blur_6_outer_34_tilt_0p35",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 1.0,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_outer_width_px": 34.0,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.35
+      }
+    },
+    {
+      "name": "rim_amp_0p5_blur_8_outer_34_tilt_0p35",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.5,
+        "simulation.capture_engine_params.dic_blur_sigma_px": 8.0,
+        "simulation.capture_engine_params.reflectance.rim_outer_width_px": 34.0,
+        "simulation.capture_engine_params.reflectance.illumination_tilt_strength": 0.35
+      }
+    }
+  ]
+}
