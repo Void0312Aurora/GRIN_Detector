@@ -11,6 +11,7 @@ from mini_grin_rebuild.data.generate_dataset import random_triplet
 from mini_grin_rebuild.data.virtual_objects import microlens_standard
 from mini_grin_rebuild.evaluation.metrics import defect_mask
 from mini_grin_rebuild.physics.factory import create_forward_model
+from mini_grin_rebuild.physics.phase import phase_scale
 from mini_grin_rebuild.simulation.factory import create_simulation_engine
 from mini_grin_rebuild.simulation.transforms.utils import gaussian_blur
 from mini_grin_rebuild.simulation.types import CaptureBundle
@@ -40,7 +41,7 @@ def defect_local_mask(defect: np.ndarray, cfg: ExperimentConfig) -> np.ndarray:
 
 
 def _phase_scale(cfg: ExperimentConfig) -> float:
-    return float((2.0 * np.pi / cfg.simulation.wavelength) * (cfg.simulation.n_object - cfg.simulation.n_air))
+    return phase_scale(cfg.simulation)
 
 
 def _spawn_rng(master: np.random.Generator) -> np.random.Generator:
@@ -440,7 +441,7 @@ def run_sign_method_comparison(
     engine = create_simulation_engine(cfg.simulation)
     rng = np.random.default_rng(int(seed))
 
-    if str(getattr(cfg.simulation, "scene", "legacy")) == "microlens_srt":
+    if str(getattr(cfg.simulation, "scene", "legacy")) in {"microlens_srt", "microlens_spherical_cap"}:
         expected_standard = microlens_standard(cfg.simulation).astype(np.float32)
     else:
         expected_standard = None
@@ -450,7 +451,7 @@ def run_sign_method_comparison(
         triplet = random_triplet(cfg.simulation, rng)
         standard = np.asarray(triplet["standard"].height_map, dtype=np.float32)
         if expected_standard is not None and not np.allclose(standard, expected_standard):
-            raise AssertionError("microlens_srt standard should be deterministic across random samples")
+            raise AssertionError("microlens standard should be deterministic across random samples")
         records.append(
             compare_sign_methods_on_sample(
                 cfg=cfg,

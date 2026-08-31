@@ -15,12 +15,12 @@ from mini_grin_rebuild.data.virtual_objects import (
     defect_patch,
     scratch_defect,
 )
+from mini_grin_rebuild.physics.phase import phase_scale
 from mini_grin_rebuild.simulation.factory import create_simulation_engine
 
 
 def _wrap_height(cfg: SimulationConfig) -> float:
-    scale = (2.0 * np.pi / cfg.wavelength) * (cfg.n_object - cfg.n_air)
-    return float((np.pi * cfg.wrap_safety) / max(scale, 1e-12))
+    return float((np.pi * cfg.wrap_safety) / max(phase_scale(cfg), 1e-12))
 
 
 def _sample_defect_center(cfg: SimulationConfig, rng: np.random.Generator) -> tuple[float, float]:
@@ -51,7 +51,7 @@ def _sample_defect_amplitude(cfg: SimulationConfig, rng: np.random.Generator) ->
     """
     scene = str(getattr(cfg, "scene", "legacy"))
     sign = -1.0 if rng.random() < 0.5 else 1.0
-    if scene != "microlens_srt":
+    if scene not in {"microlens_srt", "microlens_spherical_cap"}:
         return sign * float(rng.uniform(0.05, 0.3))
 
     wrap_h = _wrap_height(cfg)
@@ -66,7 +66,7 @@ def _sample_defect_amplitude(cfg: SimulationConfig, rng: np.random.Generator) ->
 
 
 def _phase_scale(cfg: SimulationConfig) -> float:
-    return float((2.0 * np.pi / cfg.wavelength) * (cfg.n_object - cfg.n_air))
+    return phase_scale(cfg)
 
 
 def _estimate_wrap_metrics(
@@ -280,10 +280,15 @@ def generate_dataset(
             "grid_size": cfg.grid_size,
             "dx": cfg.dx,
             "wavelength": cfg.wavelength,
+            "phase_mode": cfg.phase_mode,
+            "reflection_incidence_angle_deg": cfg.reflection_incidence_angle_deg,
             "n_object": cfg.n_object,
             "n_air": cfg.n_air,
+            "numerical_aperture": cfg.numerical_aperture,
             "noise_level": cfg.noise_level,
             "height_scale": cfg.height_scale,
+            "lens_curvature_radius_um": cfg.lens_curvature_radius_um,
+            "lens_sag_um": cfg.lens_sag_um,
             "wrap_safety": cfg.wrap_safety,
             "defect_sigma_min_um": cfg.defect_sigma_min_um,
             "defect_sigma_max_um": cfg.defect_sigma_max_um,

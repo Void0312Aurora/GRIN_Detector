@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from mini_grin_rebuild.core.configs import SimulationConfig
+from mini_grin_rebuild.physics.phase import phase_scale
 
 
 class DifferentiableGradientLayer(nn.Module):
@@ -50,8 +51,7 @@ class DifferentiableGradientLayer(nn.Module):
         return {"I_x": ix, "I_y": iy}
 
     def _phase(self, height: torch.Tensor) -> torch.Tensor:
-        scale = (2.0 * math.pi / self.cfg.wavelength) * (self.cfg.n_object - self.cfg.n_air)
-        return scale * height
+        return phase_scale(self.cfg) * height
 
     def _gradient(self, phase: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         backend = getattr(self.cfg, "gradient_backend", "finite")

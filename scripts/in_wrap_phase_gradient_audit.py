@@ -141,9 +141,9 @@ def main() -> None:
     out_dir = Path(args.out_dir) if args.out_dir else (Path(cfg.paths.runs_dir) / f"{timestamp}_in_wrap_phase_gradient_audit")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    phase_scale = (2.0 * math.pi / float(cfg.simulation.wavelength)) * (
-        float(cfg.simulation.n_object) - float(cfg.simulation.n_air)
-    )
+    from mini_grin_rebuild.physics.phase import phase_scale as _shared_phase_scale
+
+    phase_scale = _shared_phase_scale(cfg.simulation)
     dx = float(cfg.simulation.dx)
     h = int(cfg.simulation.grid_size)
     w = int(cfg.simulation.grid_size)
