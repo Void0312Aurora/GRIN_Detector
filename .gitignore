@@ -11,6 +11,7 @@ __pycache__/
 /runs_archive/
 /output/
 /outputs/
+/analysis_outputs/
 /external_data/raw/
 /external_data/processed/
 *.npz
