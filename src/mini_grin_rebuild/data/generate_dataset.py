@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import math
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 import numpy as np
 
@@ -17,6 +17,7 @@ from mini_grin_rebuild.data.virtual_objects import (
 )
 from mini_grin_rebuild.physics.phase import phase_scale
 from mini_grin_rebuild.simulation.factory import create_simulation_engine
+from mini_grin_rebuild.simulation.transforms.utils import gaussian_blur, sample_range
 
 
 def _wrap_height(cfg: SimulationConfig) -> float:
@@ -180,6 +181,70 @@ def _spawn_rng(master: np.random.Generator) -> np.random.Generator:
     return np.random.default_rng(seed)
 
 
+def _sample_defect_scattering_modifier(
+    cfg: SimulationConfig,
+    defect_height: np.ndarray,
+    *,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray | None, dict[str, Any]]:
+    """Build a localized complex-field defect coupled to the height support.
+
+    The modifier is identity outside the defect.  It represents roughness,
+    contamination or a chip that changes local scattering much more strongly
+    than its smooth height contribution.  The RNG is deliberately supplied by
+    the dataset loop from an independent per-sample seed, so enabling this
+    optional branch does not perturb legacy height sampling or optical-noise
+    streams.
+    """
+
+    raw = getattr(cfg, "defect_scattering", {}) or {}
+    if not isinstance(raw, Mapping):
+        raise TypeError("simulation.defect_scattering must be a JSON object")
+    enabled = bool(raw.get("enabled", bool(raw)))
+    if not enabled:
+        return None, {"enabled": False, "applied": False}
+
+    probability = float(np.clip(sample_range(rng, raw.get("probability"), 1.0), 0.0, 1.0))
+    if rng.random() >= probability:
+        return None, {"enabled": True, "applied": False, "probability": probability}
+
+    amplitude_factor = max(0.0, sample_range(rng, raw.get("amplitude_factor"), 8.0))
+    rough_phase_rad = max(0.0, sample_range(rng, raw.get("rough_phase_rad"), 0.8))
+    texture_sigma_px = max(0.0, sample_range(rng, raw.get("texture_sigma_px"), 1.5))
+    support_power = max(0.1, sample_range(rng, raw.get("support_power"), 1.0))
+
+    defect = np.asarray(defect_height, dtype=np.float32)
+    peak = float(np.max(np.abs(defect)))
+    if peak <= 1e-12:
+        return None, {
+            "enabled": True,
+            "applied": False,
+            "probability": probability,
+            "reason": "zero_height_support",
+        }
+    support = np.clip(np.abs(defect) / peak, 0.0, 1.0) ** support_power
+    rough_basis = rng.normal(0.0, 1.0, defect.shape).astype(np.float32)
+    if texture_sigma_px > 0.0:
+        rough_basis = gaussian_blur(rough_basis, texture_sigma_px)
+    rough_basis = rough_basis - float(np.mean(rough_basis))
+    rough_std = float(np.std(rough_basis))
+    if rough_std > 1e-9:
+        rough_basis = rough_basis / rough_std
+    phase = rough_phase_rad * support * rough_basis
+    amplitude = 1.0 + (amplitude_factor - 1.0) * support
+    modifier = (amplitude * np.exp(1j * phase)).astype(np.complex64)
+    return modifier, {
+        "enabled": True,
+        "applied": True,
+        "probability": probability,
+        "amplitude_factor": float(amplitude_factor),
+        "rough_phase_rad": float(rough_phase_rad),
+        "texture_sigma_px": float(texture_sigma_px),
+        "support_power": float(support_power),
+        "support_fraction_gt_0_1": float(np.mean(support > 0.1)),
+    }
+
+
 def generate_dataset(
     cfg: SimulationConfig,
     *,
@@ -199,19 +264,59 @@ def generate_dataset(
     rng = np.random.default_rng(int(seed))
     splits = {"train": int(train), "val": int(val), "test": int(test)}
     engine = create_simulation_engine(cfg)
+    raw_scattering_cfg = getattr(cfg, "defect_scattering", {}) or {}
+    if not isinstance(raw_scattering_cfg, Mapping):
+        raise TypeError("simulation.defect_scattering must be a JSON object")
+    scattering_cfg = dict(raw_scattering_cfg)
+    scattering_enabled = bool(scattering_cfg.get("enabled", bool(scattering_cfg)))
+    if scattering_enabled and not bool(getattr(engine, "supports_extra_field_modifiers", False)):
+        raise ValueError(
+            f"capture engine {getattr(engine, 'name', type(engine).__name__)!r} "
+            "does not support simulation.defect_scattering"
+        )
     sample_records: list[dict[str, Any]] = []
     wrap_class_counts = {"in_wrap": 0, "cross_wrap": 0}
 
+    split_ids = {name: index for index, name in enumerate(splits)}
     for split, count in splits.items():
         split_dir = root / split
         split_dir.mkdir(parents=True, exist_ok=True)
         for idx in range(count):
             triplet = random_triplet(cfg, rng)
+            scattering_seed = (
+                int(seed) * 1_000_003
+                + int(split_ids[split]) * 10_007
+                + int(idx) * 97
+                + 0x5CA77E2
+            ) % (2**32)
+            scattering_modifier, scattering_meta = _sample_defect_scattering_modifier(
+                cfg,
+                triplet["defect"].height_map,
+                rng=np.random.default_rng(scattering_seed),
+            )
+            triplet["test"].field_modifier = scattering_modifier
             heights = {name: triplet[name].height_map for name in ("standard", "test", "reference")}
+            extra_field_modifiers = {
+                name: triplet[name].field_modifier
+                for name in ("standard", "test", "reference")
+                if triplet[name].field_modifier is not None
+            }
             bundle_rng = _spawn_rng(rng)
             simulation_meta: dict[str, Any]
             if hasattr(engine, "simulate_bundle"):
-                bundle = engine.simulate_bundle(heights, rng=bundle_rng)  # type: ignore[attr-defined]
+                if extra_field_modifiers:
+                    if not bool(getattr(engine, "supports_extra_field_modifiers", False)):
+                        raise ValueError(
+                            f"capture engine {getattr(engine, 'name', type(engine).__name__)!r} "
+                            "does not support simulation.defect_scattering"
+                        )
+                    bundle = engine.simulate_bundle(  # type: ignore[attr-defined]
+                        heights,
+                        rng=bundle_rng,
+                        extra_field_modifiers=extra_field_modifiers,
+                    )
+                else:
+                    bundle = engine.simulate_bundle(heights, rng=bundle_rng)  # type: ignore[attr-defined]
                 captures = {name: bundle.captures[name].to_channel_dict() for name in heights}
                 simulation_meta = dict(bundle.meta)
             else:
@@ -267,6 +372,10 @@ def generate_dataset(
                     "index": idx,
                     "file": str(file_path.relative_to(root)),
                     "simulation": simulation_meta,
+                    "defect_scattering": {
+                        **scattering_meta,
+                        "seed": int(scattering_seed),
+                    },
                     "wrap": wrap_meta,
                 }
             )
@@ -306,6 +415,7 @@ def generate_dataset(
             "large_defect_prob": float(getattr(cfg, "large_defect_prob", 0.0) or 0.0),
             "large_defect_amplitude_wrap_min": float(getattr(cfg, "large_defect_amplitude_wrap_min", 1.0) or 1.0),
             "large_defect_amplitude_wrap_max": float(getattr(cfg, "large_defect_amplitude_wrap_max", 2.0) or 2.0),
+            "defect_scattering": dict(getattr(cfg, "defect_scattering", {}) or {}),
         },
         "capture_engine": engine.meta(),
         "wrap_summary": {

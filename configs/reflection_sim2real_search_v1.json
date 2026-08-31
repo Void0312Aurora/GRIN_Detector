@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "description": "One-factor and small interaction ablations around sim2real_v1. Selection uses only the five April calibration blocks.",
+  "candidates": [
+    {
+      "name": "v1_reference",
+      "overrides": {}
+    },
+    {
+      "name": "coherence_32",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.speckle_realizations": 32
+      }
+    },
+    {
+      "name": "coherence_64",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.speckle_realizations": 64
+      }
+    },
+    {
+      "name": "fillet_8um",
+      "overrides": {
+        "simulation.seam_fillet_width_um": 8.0
+      }
+    },
+    {
+      "name": "fillet_12um",
+      "overrides": {
+        "simulation.seam_fillet_width_um": 12.0
+      }
+    },
+    {
+      "name": "rim_rough_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_phase_rough_rad": 0.5
+      }
+    },
+    {
+      "name": "rim_rough_2p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_phase_rough_rad": 2.5
+      }
+    },
+    {
+      "name": "rim_amp_1p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 1.5
+      }
+    },
+    {
+      "name": "rim_amp_6p0",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 6.0
+      }
+    },
+    {
+      "name": "inner_4px",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_inner_width_px": 4.0
+      }
+    },
+    {
+      "name": "blur_6px_outer_24px",
+      "overrides": {
+        "simulation.capture_engine_params.dic_blur_sigma_px": 6.0,
+        "simulation.capture_engine_params.reflectance.rim_outer_width_px": 24.0
+      }
+    },
+    {
+      "name": "coherence_32_fillet_8um",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.speckle_realizations": 32,
+        "simulation.seam_fillet_width_um": 8.0
+      }
+    },
+    {
+      "name": "coherence_32_rim_rough_0p5",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.speckle_realizations": 32,
+        "simulation.capture_engine_params.reflectance.rim_phase_rough_rad": 0.5
+      }
+    },
+    {
+      "name": "coherent_seam_1p0",
+      "overrides": {
+        "simulation.capture_engine_params.reflectance.rim_amplitude": 0.0,
+        "simulation.capture_engine_params.reflectance.rim_coherent_amplitude": 1.0,
+        "simulation.capture_engine_params.reflectance.rim_phase_rough_rad": 0.0,
+        "simulation.capture_engine_params.reflectance.rim_inner_width_px": 4.0
+      }
+    }
+  ]
+}

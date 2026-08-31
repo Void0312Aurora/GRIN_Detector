@@ -11,6 +11,7 @@ __pycache__/
 /runs_archive/
 /output/
 /outputs/
+/analysis_outputs/
 /external_data/raw/
 /external_data/processed/
 *.npz
@@ -35,6 +36,12 @@ docs/**/*.pptx
 /scripts/export_formula_images*.py
 /scripts/rebuild_slide3_principle.py
 /scripts/render_*.py
+!/scripts/render_reflection_noise_comparison.py
+!/scripts/render_reflection_localized_ghost_comparison.py
+!/scripts/render_reflection_defect_visibility.py
+!/scripts/render_reflection_scatter_defect_comparison.py
+!/scripts/render_reflection_seam_band_test.py
+!/scripts/render_reflection_seam_fillet_test.py
 
 # local/private benchmark configs
 configs/*instrument_lite*.json

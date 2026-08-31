@@ -72,7 +72,8 @@ class OpticalLeakageLiteEngine:
     """
 
     name = "optical_leakage_lite"
-    version = "4"
+    version = "5"
+    supports_extra_field_modifiers = True
 
     def __init__(self, cfg: SimulationConfig) -> None:
         self.cfg = cfg
@@ -120,19 +121,114 @@ class OpticalLeakageLiteEngine:
             "raw_gain": sample_range(rng, p.get("raw_gain"), 1.0),
             "raw_bias": sample_range(rng, p.get("raw_bias"), 0.0),
             "shear_px": max(0.5, sample_range(rng, p.get("shear_px"), 1.0)),
+            # Ordered inner-edge intensity left unresolved by the scalar
+            # reflectance model (for example polarization/illumination
+            # coupling). Default zero keeps the legacy optical path intact.
+            "rim_focus_amplitude": max(
+                0.0,
+                sample_range(rng, p.get("rim_focus_amplitude"), 0.0),
+            ),
+            "rim_focus_order": max(
+                1,
+                int(round(sample_range(rng, p.get("rim_focus_order"), 4.0))),
+            ),
+            "rim_focus_phase_deg": sample_range(rng, p.get("rim_focus_phase_deg"), 0.0),
+            "rim_focus_radial_offset_px": sample_range(
+                rng,
+                p.get("rim_focus_radial_offset_px"),
+                -1.5,
+            ),
+            "rim_focus_width_px": max(
+                0.3,
+                sample_range(rng, p.get("rim_focus_width_px"), 2.0),
+            ),
+            "rim_focus_angular_power": max(
+                0.25,
+                sample_range(rng, p.get("rim_focus_angular_power"), 2.0),
+            ),
         }
+
+    @staticmethod
+    def _sample_rim_angular_harmonics(
+        rng: np.random.Generator,
+        raw_harmonics: Any,
+    ) -> list[dict[str, float | int]]:
+        if raw_harmonics in (None, []):
+            return []
+        if not isinstance(raw_harmonics, (list, tuple)):
+            raise TypeError("reflectance.rim_angular_harmonics must be a JSON array")
+        sampled: list[dict[str, float | int]] = []
+        for index, raw_harmonic in enumerate(raw_harmonics):
+            if not isinstance(raw_harmonic, Mapping):
+                raise TypeError(
+                    f"reflectance.rim_angular_harmonics[{index}] must be a JSON object"
+                )
+            order = int(round(sample_range(rng, raw_harmonic.get("order"), 4.0)))
+            if order < 1:
+                raise ValueError(
+                    f"reflectance.rim_angular_harmonics[{index}].order must be >= 1"
+                )
+            sampled.append(
+                {
+                    "order": order,
+                    "amplitude": max(
+                        0.0,
+                        sample_range(rng, raw_harmonic.get("amplitude"), 0.0),
+                    ),
+                    "phase_deg": sample_range(rng, raw_harmonic.get("phase_deg"), 0.0),
+                }
+            )
+        return sampled
 
     def _sample_reflectance_params(self, rng: np.random.Generator) -> dict[str, Any]:
         p = self.reflectance_cfg
         rim_width = max(0.5, sample_range(rng, p.get("rim_width_px"), 4.0))
-        background_rough = max(0.0, sample_range(rng, p.get("background_phase_rough_rad"), 0.0))
+        background_texture_sigma = max(
+            0.0, sample_range(rng, p.get("background_texture_sigma_px"), 1.5)
+        )
+        # Sample these once and reuse them for the rim defaults.  Re-sampling a
+        # ranged background value would make the documented default false and
+        # silently shift every later stochastic parameter in the bundle.
+        lens_amplitude = max(0.0, sample_range(rng, p.get("lens_amplitude"), 1.0))
+        background_amplitude = max(0.0, sample_range(rng, p.get("background_amplitude"), 1.0))
+        background_phase_rough = max(
+            0.0, sample_range(rng, p.get("background_phase_rough_rad"), 0.0)
+        )
+        lens_scatter_capture_fraction = float(
+            np.clip(sample_range(rng, p.get("lens_scatter_capture_fraction"), 0.0), 0.0, 1.0)
+        )
+        lens_scatter_common_fraction = float(
+            np.clip(sample_range(rng, p.get("lens_scatter_common_fraction"), 0.0), 0.0, 1.0)
+        )
+        shared_scatter_fraction = lens_scatter_capture_fraction + lens_scatter_common_fraction
+        if shared_scatter_fraction > 1.0:
+            lens_scatter_capture_fraction /= shared_scatter_fraction
+            lens_scatter_common_fraction /= shared_scatter_fraction
         return {
             "enabled": bool(p.get("enabled", bool(p))),
-            "lens_amplitude": max(0.0, sample_range(rng, p.get("lens_amplitude"), 1.0)),
-            "background_amplitude": max(0.0, sample_range(rng, p.get("background_amplitude"), 1.0)),
-            "background_phase_rough_rad": background_rough,
-            "background_texture_sigma_px": max(
-                0.0, sample_range(rng, p.get("background_texture_sigma_px"), 1.5)
+            "lens_amplitude": lens_amplitude,
+            "background_amplitude": background_amplitude,
+            "background_phase_rough_rad": background_phase_rough,
+            "background_texture_sigma_px": background_texture_sigma,
+            # A single correlated phase field produces one characteristic
+            # speckle scale.  Real dark-port fixture regions contain both a
+            # broad mottled component and a finer granular component, so allow
+            # a second phase scale while keeping the legacy single-scale model
+            # when the fraction is zero.
+            "background_phase_fine_fraction": float(
+                np.clip(sample_range(rng, p.get("background_phase_fine_fraction"), 0.0), 0.0, 1.0)
+            ),
+            "background_phase_fine_sigma_px": max(
+                0.3, sample_range(rng, p.get("background_phase_fine_sigma_px"), 1.5)
+            ),
+            # Static reflectivity/illumination variation of the fixture.  This
+            # map is shared by every coherence realization in one capture;
+            # otherwise averaging would incorrectly erase the material texture.
+            "background_amplitude_texture_strength": max(
+                0.0, sample_range(rng, p.get("background_amplitude_texture_strength"), 0.0)
+            ),
+            "background_amplitude_texture_sigma_px": max(
+                0.3, sample_range(rng, p.get("background_amplitude_texture_sigma_px"), 24.0)
             ),
             "edge_softness_px": max(0.1, sample_range(rng, p.get("edge_softness_px"), 1.5)),
             # Per-lens surface micro-roughness inside the cap (polishing/molding
@@ -145,6 +241,20 @@ class OpticalLeakageLiteEngine:
             # a rough-phase field of this amplitude is added inside the cap.
             "lens_scatter_amplitude": max(0.0, sample_range(rng, p.get("lens_scatter_amplitude"), 0.0)),
             "lens_scatter_phase_rad": max(0.0, sample_range(rng, p.get("lens_scatter_phase_rad"), 3.0)),
+            # A fraction of the continuous lens scatter can be locked to the
+            # capture (or to a fixed instrument map) instead of being redrawn
+            # for every coherence realization.  Without this term the
+            # coherent field averages away and only isolated point scatterers
+            # remain in the deterministic median.
+            "lens_scatter_capture_fraction": lens_scatter_capture_fraction,
+            "lens_scatter_common_fraction": lens_scatter_common_fraction,
+            "lens_scatter_common_seed": int(round(sample_range(rng, p.get("lens_scatter_common_seed"), 0.0))),
+            "lens_scatter_fine_fraction": float(
+                np.clip(sample_range(rng, p.get("lens_scatter_fine_fraction"), 0.0), 0.0, 1.0)
+            ),
+            "lens_scatter_fine_sigma_px": max(
+                0.3, sample_range(rng, p.get("lens_scatter_fine_sigma_px"), 1.0)
+            ),
             # Sparse point scatterers (dust, micro-pits) on the cap: fixed
             # positions per capture, random phase per coherence realization.
             "lens_point_scatter_count": max(
@@ -163,7 +273,11 @@ class OpticalLeakageLiteEngine:
             # reuses the background roughness sample (no extra rng draw).
             "rim_phase_rough_rad": max(
                 0.0,
-                sample_range(rng, p.get("rim_phase_rough_rad"), background_rough),
+                sample_range(
+                    rng,
+                    p.get("rim_phase_rough_rad"),
+                    background_phase_rough,
+                ),
             ),
             "rim_width_px": rim_width,
             # The seam band is asymmetric in reality: a sharp inner edge at the cap
@@ -171,6 +285,34 @@ class OpticalLeakageLiteEngine:
             # Defaults fall back to the symmetric rim_width_px.
             "rim_inner_width_px": max(0.5, sample_range(rng, p.get("rim_inner_width_px"), rim_width)),
             "rim_outer_width_px": max(0.5, sample_range(rng, p.get("rim_outer_width_px"), rim_width)),
+            "rim_texture_sigma_px": max(
+                0.3,
+                sample_range(rng, p.get("rim_texture_sigma_px"), background_texture_sigma),
+            ),
+            # Higher-order seam nonuniformity that survives the 24-frame
+            # median.  It is sampled once per capture and shared across the
+            # partial-coherence realizations, unlike speckle phase.
+            "rim_angular_modulation_strength": max(
+                0.0, sample_range(rng, p.get("rim_angular_modulation_strength"), 0.0)
+            ),
+            "rim_angular_correlation_deg": max(
+                1.0, sample_range(rng, p.get("rim_angular_correlation_deg"), 20.0)
+            ),
+            # Optional ordered seam harmonics.  The legacy random angular
+            # field remains unchanged when this list is absent or empty.
+            "rim_angular_harmonics": self._sample_rim_angular_harmonics(
+                rng,
+                p.get("rim_angular_harmonics"),
+            ),
+            "rim_angular_harmonic_floor": float(
+                np.clip(sample_range(rng, p.get("rim_angular_harmonic_floor"), 0.05), 0.0, 1.0)
+            ),
+            # The low-order illumination dipole already has an explicit,
+            # physically interpretable control below.  Candidate sim-to-real
+            # models can remove the random field's first harmonic so the two
+            # mechanisms do not fight each other; default false preserves the
+            # legacy random angular spectrum exactly.
+            "rim_angular_remove_dipole": bool(p.get("rim_angular_remove_dipole", False)),
             # Number of independent rough-phase realizations whose intensities are
             # averaged: partially developed speckle from finite illumination
             # spatial coherence. 1 keeps fully coherent speckle.
@@ -208,6 +350,7 @@ class OpticalLeakageLiteEngine:
         params: Mapping[str, Any],
         point_positions: tuple[np.ndarray, np.ndarray] | None = None,
         static_lens_fields: Mapping[str, np.ndarray] | None = None,
+        shared_context: Mapping[str, np.ndarray] | None = None,
     ) -> np.ndarray | None:
         """Amplitude/phase map separating the specular lens cap from the scattering fixture.
 
@@ -230,7 +373,13 @@ class OpticalLeakageLiteEngine:
         outside = 1.0 / (1.0 + np.exp(-edge_arg))
         lens_amplitude = float(params["lens_amplitude"])
         background_amplitude = float(params["background_amplitude"])
-        amplitude = (1.0 - outside) * lens_amplitude + outside * background_amplitude
+        background_texture = None if shared_context is None else shared_context.get("background_amplitude")
+        if background_texture is None:
+            background_texture = np.ones(shape, dtype=np.float32)
+        amplitude = (
+            (1.0 - outside) * lens_amplitude
+            + outside * background_amplitude * np.asarray(background_texture, dtype=np.float32)
+        )
         # The cap-to-substrate seam behaves as a rough scattering ring, not a
         # clean phase step; represent it as an additive rough-amplitude annulus.
         rim_amplitude = float(params["rim_amplitude"])
@@ -247,7 +396,10 @@ class OpticalLeakageLiteEngine:
                 np.exp(-0.5 * (distance / outer_width) ** 2),
             ).astype(np.float32)
         if rim_amplitude > 0.0 and ring is not None:
-            amplitude = amplitude + rim_amplitude * ring
+            rim_modulation = None if shared_context is None else shared_context.get("rim_angular")
+            if rim_modulation is None:
+                rim_modulation = np.ones(shape, dtype=np.float32)
+            amplitude = amplitude + rim_amplitude * ring * np.asarray(rim_modulation, dtype=np.float32)
             rough_weight = np.clip(rough_weight + ring, 0.0, 1.0)
         tilt = float(params["illumination_tilt_strength"])
         if tilt > 0.0:
@@ -270,14 +422,32 @@ class OpticalLeakageLiteEngine:
             background_weight = np.clip(background_weight - ring_weight, 0.0, 1.0)
         lens_weight = np.clip(1.0 - rough_weight, 0.0, 1.0)
         sigma = float(params["background_texture_sigma_px"])
+        fine_fraction = float(params.get("background_phase_fine_fraction", 0.0))
+        fine_sigma = float(params.get("background_phase_fine_sigma_px", 1.5))
         phase_total: np.ndarray | None = None
         if rough > 0.0:
+            background_phase = self._normalized_random_field(
+                rng, shape, sigma_x_px=sigma, sigma_y_px=sigma
+            )
+            if fine_fraction > 0.0:
+                fine_phase = self._normalized_random_field(
+                    rng, shape, sigma_x_px=fine_sigma, sigma_y_px=fine_sigma
+                )
+                coarse_weight = 1.0 - fine_fraction
+                norm = max(float(np.hypot(coarse_weight, fine_fraction)), 1e-6)
+                background_phase = (
+                    coarse_weight * background_phase + fine_fraction * fine_phase
+                ) / norm
             phase_total = background_weight * (
-                rough * self._normalized_random_field(rng, shape, sigma_x_px=sigma, sigma_y_px=sigma)
+                rough * background_phase
             )
         if rim_rough > 0.0 and ring_weight is not None:
+            rim_sigma = float(params.get("rim_texture_sigma_px", sigma))
             rim_phase = ring_weight * (
-                rim_rough * self._normalized_random_field(rng, shape, sigma_x_px=sigma, sigma_y_px=sigma)
+                rim_rough
+                * self._normalized_random_field(
+                    rng, shape, sigma_x_px=rim_sigma, sigma_y_px=rim_sigma
+                )
             )
             phase_total = rim_phase if phase_total is None else phase_total + rim_phase
         if lens_rough > 0.0 and static_lens_fields is not None:
@@ -297,10 +467,35 @@ class OpticalLeakageLiteEngine:
             ).astype(np.complex64)
         lens_scatter = float(params.get("lens_scatter_amplitude", 0.0))
         if lens_scatter > 0.0 and static_lens_fields is not None:
-            scatter_phase = (
-                float(params.get("lens_scatter_phase_rad", 3.0))
-                * static_lens_fields["lens_scatter_basis"]
-            )
+            # Decompose the cap scattering phase into a batch-common part, a
+            # per-capture part and a lens-specific part.  Every component is a
+            # static surface property, so all of them (including the
+            # independent one) must come from fields drawn once per capture:
+            # redrawing here would average the cap texture away as K grows.
+            capture_fraction = float(params.get("lens_scatter_capture_fraction", 0.0))
+            common_fraction = float(params.get("lens_scatter_common_fraction", 0.0))
+            independent_fraction = max(1.0 - capture_fraction - common_fraction, 0.0)
+            phase_basis = np.zeros(shape, dtype=np.float32)
+            if common_fraction > 0.0 and shared_context is not None:
+                common_basis = shared_context.get("lens_scatter_common")
+                if common_basis is not None:
+                    phase_basis += np.sqrt(common_fraction) * np.asarray(
+                        common_basis,
+                        dtype=np.float32,
+                    )
+            if capture_fraction > 0.0 and shared_context is not None:
+                capture_basis = shared_context.get("lens_scatter_capture")
+                if capture_basis is not None:
+                    phase_basis += np.sqrt(capture_fraction) * np.asarray(
+                        capture_basis,
+                        dtype=np.float32,
+                    )
+            if independent_fraction > 0.0:
+                phase_basis += np.sqrt(independent_fraction) * np.asarray(
+                    static_lens_fields["lens_scatter_basis"],
+                    dtype=np.float32,
+                )
+            scatter_phase = float(params.get("lens_scatter_phase_rad", 3.0)) * phase_basis
             modifier = modifier + (
                 lens_scatter * lens_weight * np.exp(1j * scatter_phase)
             ).astype(np.complex64)
@@ -313,6 +508,170 @@ class OpticalLeakageLiteEngine:
                     point_amplitude * np.exp(1j * phases)
                 ).astype(np.complex64)
         return np.asarray(modifier, dtype=np.complex64)
+
+    def _lens_scatter_phase_basis(
+        self,
+        rng: np.random.Generator,
+        shape: tuple[int, int],
+        params: Mapping[str, Any],
+    ) -> np.ndarray:
+        """Continuous multi-scale lens scatter with unit RMS.
+
+        The default fine fraction is zero, which exactly retains the legacy
+        single correlated phase-field construction.
+        """
+
+        lens_sigma = float(params["lens_texture_sigma_px"])
+        coarse = self._normalized_random_field(
+            rng,
+            shape,
+            sigma_x_px=lens_sigma,
+            sigma_y_px=lens_sigma,
+        )
+        fine_fraction = float(params.get("lens_scatter_fine_fraction", 0.0))
+        if fine_fraction <= 0.0:
+            return coarse
+        fine_sigma = float(params.get("lens_scatter_fine_sigma_px", 1.0))
+        fine = self._normalized_random_field(
+            rng,
+            shape,
+            sigma_x_px=fine_sigma,
+            sigma_y_px=fine_sigma,
+        )
+        coarse_weight = 1.0 - fine_fraction
+        norm = max(float(np.hypot(coarse_weight, fine_fraction)), 1e-6)
+        return ((coarse_weight * coarse + fine_fraction * fine) / norm).astype(np.float32)
+
+    @staticmethod
+    def _ordered_angular_field(
+        shape: tuple[int, int],
+        harmonics: Any,
+        *,
+        floor: float,
+    ) -> np.ndarray:
+        if not harmonics:
+            return np.ones(shape, dtype=np.float32)
+        h, w = shape
+        yy = np.arange(h, dtype=np.float32) - 0.5 * (h - 1)
+        xx = np.arange(w, dtype=np.float32) - 0.5 * (w - 1)
+        y_grid, x_grid = np.meshgrid(yy, xx, indexing="ij")
+        theta = np.arctan2(y_grid, x_grid)
+        field = np.ones(shape, dtype=np.float32)
+        sample_theta = np.linspace(0.0, 2.0 * np.pi, 4096, endpoint=False)
+        sample_field = np.ones(sample_theta.shape, dtype=np.float64)
+        for harmonic in harmonics:
+            order = int(harmonic["order"])
+            amplitude = float(harmonic["amplitude"])
+            phase = np.deg2rad(float(harmonic["phase_deg"]))
+            field += amplitude * np.cos(order * (theta - phase)).astype(np.float32)
+            sample_field += amplitude * np.cos(order * (sample_theta - phase))
+        clipped = np.clip(field, float(floor), None)
+        normalization = max(float(np.mean(np.clip(sample_field, float(floor), None))), 1e-6)
+        return (clipped / normalization).astype(np.float32)
+
+    @staticmethod
+    def _periodic_angular_random_field(
+        rng: np.random.Generator,
+        shape: tuple[int, int],
+        *,
+        correlation_deg: float,
+        remove_dipole: bool = False,
+    ) -> np.ndarray:
+        """Smooth zero-mean unit-variance random field indexed only by angle.
+
+        The FFT construction is circular by definition, avoiding a seam at
+        ``-pi/pi``.  It represents fixed manufacturing/illumination variation
+        around the moulded lens seam rather than per-realization speckle.
+        """
+
+        samples = 720
+        white = rng.normal(0.0, 1.0, samples)
+        sigma_bins = max(float(correlation_deg) * samples / 360.0, 1.0)
+        frequencies = np.fft.rfftfreq(samples)
+        transfer = np.exp(-2.0 * (np.pi * sigma_bins * frequencies) ** 2)
+        spectrum = np.fft.rfft(white) * transfer
+        if remove_dipole and spectrum.size > 1:
+            spectrum[1] = 0.0
+        smooth = np.fft.irfft(spectrum, n=samples).real
+        smooth = smooth - float(np.mean(smooth))
+        std = float(np.std(smooth))
+        if std <= 1e-9:
+            smooth = np.zeros_like(smooth)
+        else:
+            smooth = smooth / std
+
+        h, w = shape
+        yy = np.arange(h, dtype=np.float32) - 0.5 * (h - 1)
+        xx = np.arange(w, dtype=np.float32) - 0.5 * (w - 1)
+        y_grid, x_grid = np.meshgrid(yy, xx, indexing="ij")
+        angle_index = np.mod(np.arctan2(y_grid, x_grid), 2.0 * np.pi) * samples / (2.0 * np.pi)
+        lower = np.floor(angle_index).astype(np.int64) % samples
+        upper = (lower + 1) % samples
+        fraction = angle_index - np.floor(angle_index)
+        return ((1.0 - fraction) * smooth[lower] + fraction * smooth[upper]).astype(np.float32)
+
+    def _sample_reflectance_context(
+        self,
+        rng: np.random.Generator,
+        shape: tuple[int, int],
+        params: Mapping[str, Any],
+    ) -> dict[str, np.ndarray]:
+        """Sample material maps that must persist across coherence realizations."""
+
+        context: dict[str, np.ndarray] = {}
+        common_fraction = float(params.get("lens_scatter_common_fraction", 0.0))
+        capture_fraction = float(params.get("lens_scatter_capture_fraction", 0.0))
+        if common_fraction > 0.0:
+            common_rng = np.random.default_rng(int(params.get("lens_scatter_common_seed", 0)))
+            context["lens_scatter_common"] = self._lens_scatter_phase_basis(
+                common_rng,
+                shape,
+                params,
+            )
+        if capture_fraction > 0.0:
+            context["lens_scatter_capture"] = self._lens_scatter_phase_basis(
+                rng,
+                shape,
+                params,
+            )
+
+        background_strength = float(params.get("background_amplitude_texture_strength", 0.0))
+        if background_strength > 0.0:
+            sigma = float(params.get("background_amplitude_texture_sigma_px", 24.0))
+            field = self._normalized_random_field(
+                rng, shape, sigma_x_px=sigma, sigma_y_px=sigma
+            )
+            context["background_amplitude"] = np.clip(
+                1.0 + background_strength * field,
+                0.05,
+                4.0,
+            ).astype(np.float32)
+
+        rim_modulation: np.ndarray | None = None
+        rim_strength = float(params.get("rim_angular_modulation_strength", 0.0))
+        if rim_strength > 0.0:
+            angular = self._periodic_angular_random_field(
+                rng,
+                shape,
+                correlation_deg=float(params.get("rim_angular_correlation_deg", 20.0)),
+                remove_dipole=bool(params.get("rim_angular_remove_dipole", False)),
+            )
+            rim_modulation = np.clip(
+                1.0 + rim_strength * angular,
+                0.05,
+                4.0,
+            ).astype(np.float32)
+        harmonics = params.get("rim_angular_harmonics", [])
+        if harmonics:
+            ordered = self._ordered_angular_field(
+                shape,
+                harmonics,
+                floor=float(params.get("rim_angular_harmonic_floor", 0.05)),
+            )
+            rim_modulation = ordered if rim_modulation is None else rim_modulation * ordered
+        if rim_modulation is not None:
+            context["rim_angular"] = np.clip(rim_modulation, 0.0, 8.0).astype(np.float32)
+        return context
 
     def _sample_field_texture_params(self, rng: np.random.Generator) -> dict[str, float]:
         p = self.field_texture_cfg
@@ -337,6 +696,10 @@ class OpticalLeakageLiteEngine:
 
     def _sample_camera_params(self, context: TransformContext) -> dict[str, Any]:
         params = self.camera_transform.sample_bundle_params(context)
+        params["pre_adc_blur_sigma_px"] = max(
+            0.0,
+            sample_range(context.rng, self.camera_cfg.get("pre_adc_blur_sigma_px"), 0.0),
+        )
         params["post_blur_sigma_px"] = max(
             0.0,
             sample_range(context.rng, self.camera_cfg.get("post_blur_sigma_px"), 0.0),
@@ -781,6 +1144,36 @@ class OpticalLeakageLiteEngine:
             "dic_y": np.asarray(dic_y, dtype=np.float32),
         }
 
+    def _rim_focus_intensity(
+        self,
+        shape: tuple[int, int],
+        params: Mapping[str, Any],
+    ) -> np.ndarray | None:
+        amplitude = float(params.get("rim_focus_amplitude", 0.0))
+        if amplitude <= 0.0:
+            return None
+        h, w = shape
+        yy = np.arange(h, dtype=np.float32) - 0.5 * (h - 1)
+        xx = np.arange(w, dtype=np.float32) - 0.5 * (w - 1)
+        y_grid, x_grid = np.meshgrid(yy, xx, indexing="ij")
+        radius = np.sqrt(x_grid**2 + y_grid**2)
+        theta = np.arctan2(y_grid, x_grid)
+        lens_radius_px = (
+            float(getattr(self.cfg, "lens_radius_fraction", 1.0) or 1.0)
+            * 0.5
+            * min(h, w)
+        )
+        center = lens_radius_px + float(params.get("rim_focus_radial_offset_px", -1.5))
+        width = max(float(params.get("rim_focus_width_px", 2.0)), 0.3)
+        radial = np.exp(-0.5 * ((radius - center) / width) ** 2)
+        order = max(int(params.get("rim_focus_order", 4)), 1)
+        phase = np.deg2rad(float(params.get("rim_focus_phase_deg", 0.0)))
+        angular = 0.5 * (1.0 + np.cos(order * (theta - phase)))
+        angular = np.clip(angular, 0.0, 1.0) ** float(
+            params.get("rim_focus_angular_power", 2.0)
+        )
+        return (amplitude * radial * angular).astype(np.float32)
+
     def _finalize_channels(
         self,
         intensities: Mapping[str, np.ndarray],
@@ -807,12 +1200,23 @@ class OpticalLeakageLiteEngine:
             dic_x = gaussian_blur(dic_x, dic_blur)
             dic_y = gaussian_blur(dic_y, dic_blur)
 
+        rim_focus = self._rim_focus_intensity(tuple(dic_x.shape), params)
+        if rim_focus is not None:
+            dic_x = dic_x + rim_focus
+            dic_y = dic_y + rim_focus
+
         channels = {
             "I_x": dic_x.astype(np.float32),
             "I_y": dic_y.astype(np.float32),
         }
         if self.emit_raw:
             channels["I_raw"] = raw.astype(np.float32)
+        pre_adc_blur = float(camera_params.get("pre_adc_blur_sigma_px", 0.0) or 0.0)
+        if pre_adc_blur > 0.0:
+            channels = {
+                name: gaussian_blur(np.asarray(value, dtype=np.float32), pre_adc_blur)
+                for name, value in channels.items()
+            }
         context = TransformContext(
             cfg=self.cfg,
             rng=rng,
@@ -932,10 +1336,11 @@ class OpticalLeakageLiteEngine:
                     rng, shape, sigma_x_px=lens_sigma, sigma_y_px=lens_sigma
                 )
             if needs_scatter:
-                static_lens_fields["lens_scatter_basis"] = self._normalized_random_field(
-                    rng, shape, sigma_x_px=lens_sigma, sigma_y_px=lens_sigma
+                static_lens_fields["lens_scatter_basis"] = self._lens_scatter_phase_basis(
+                    rng, shape, params
                 )
 
+        shared_context = self._sample_reflectance_context(rng, shape, params)
         return [
             self._reflectance_modifier(
                 rng,
@@ -943,6 +1348,7 @@ class OpticalLeakageLiteEngine:
                 params,
                 point_positions=point_positions,
                 static_lens_fields=static_lens_fields,
+                shared_context=shared_context,
             )
             for _ in range(count)
         ]
@@ -970,9 +1376,15 @@ class OpticalLeakageLiteEngine:
         dark_port_params = self._sample_dark_port_params(rng)
         modifier = self._field_modifier(rng, shape, params=texture_params)
         if extra_field_modifier is not None:
+            extra_array = np.asarray(extra_field_modifier, dtype=np.complex64)
+            if extra_array.shape != shape:
+                raise ValueError(
+                    "extra_field_modifier must match the capture shape: "
+                    f"{extra_array.shape} != {shape}"
+                )
             modifier = (
                 np.asarray(modifier, dtype=np.complex64)
-                * np.asarray(extra_field_modifier, dtype=np.complex64)
+                * extra_array
             ).astype(np.complex64)
         reflectance_maps = self._reflectance_realizations(rng, shape, reflectance_params)
         camera_context = TransformContext(cfg=self.cfg, rng=rng, shape=shape)
@@ -1049,8 +1461,14 @@ class OpticalLeakageLiteEngine:
             )
             extra = None if extra_field_modifiers is None else extra_field_modifiers.get(str(frame_name))
             if extra is not None:
+                extra_array = np.asarray(extra, dtype=np.complex64)
+                if extra_array.shape != shape:
+                    raise ValueError(
+                        f"extra_field_modifier for {frame_name!r} must match the bundle shape: "
+                        f"{extra_array.shape} != {shape}"
+                    )
                 modifier = (
-                    np.asarray(modifier, dtype=np.complex64) * np.asarray(extra, dtype=np.complex64)
+                    np.asarray(modifier, dtype=np.complex64) * extra_array
                 ).astype(np.complex64)
             intensities = self._mean_optical_intensities(
                 np.asarray(height, dtype=np.float32),
