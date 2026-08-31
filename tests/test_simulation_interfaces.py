@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,15 +21,38 @@ _bootstrap_src()
 
 from mini_grin_rebuild.core.configs import ExperimentConfig, SimulationConfig, TrainingConfig  # noqa: E402
 from mini_grin_rebuild.data.generate_dataset import generate_dataset  # noqa: E402
-from mini_grin_rebuild.data.virtual_objects import VirtualObject  # noqa: E402
+from mini_grin_rebuild.data.virtual_objects import VirtualObject, spherical_cap  # noqa: E402
 from mini_grin_rebuild.physics.factory import create_forward_model, forward_model_meta  # noqa: E402
 from mini_grin_rebuild.physics.layer import DifferentiableGradientLayer  # noqa: E402
+from mini_grin_rebuild.physics.phase import phase_scale  # noqa: E402
 from mini_grin_rebuild.physics.simulator import simulate_capture  # noqa: E402
 from mini_grin_rebuild.simulation.factory import create_simulation_engine  # noqa: E402
 from mini_grin_rebuild.simulation.types import Capture  # noqa: E402
 
 
 class TestSimulationInterfaces(unittest.TestCase):
+    def test_reflection_phase_scale_ignores_sample_index(self) -> None:
+        cfg_a = SimulationConfig(phase_mode="reflection", wavelength=0.520, n_object=1.2, n_air=1.0)
+        cfg_b = SimulationConfig(phase_mode="reflection", wavelength=0.520, n_object=2.1, n_air=1.0)
+        expected = 4.0 * np.pi / 0.520
+        self.assertAlmostEqual(phase_scale(cfg_a), expected, places=12)
+        self.assertAlmostEqual(phase_scale(cfg_b), expected, places=12)
+
+    def test_physical_spherical_cap_matches_configured_geometry(self) -> None:
+        cfg = SimulationConfig(
+            scene="microlens_spherical_cap",
+            grid_size=513,
+            dx=240.0 / 513.0,
+            lens_curvature_radius_um=400.0,
+            lens_sag_um=15.34,
+        )
+        height = spherical_cap(cfg)
+        center = cfg.grid_size // 2
+        self.assertEqual(height.shape, (cfg.grid_size, cfg.grid_size))
+        self.assertAlmostEqual(float(height[center, center]), 15.34, places=5)
+        self.assertEqual(float(height[0, 0]), 0.0)
+        self.assertGreater(int(np.count_nonzero(height)), 0)
+
     def test_default_capture_engine_matches_legacy_wrapper(self) -> None:
         cfg = SimulationConfig(grid_size=16, dx=0.39, noise_level=0.0)
         height = np.linspace(0.0, 1.0, cfg.grid_size * cfg.grid_size, dtype=np.float32).reshape(
@@ -216,6 +240,181 @@ class TestOpticalLeakageLiteEngine(unittest.TestCase):
                     msg=f"{frame}:{key}",
                 )
 
+    def test_optical_field_texture_and_camera_noise_are_reproducible(self) -> None:
+        clean_cfg = self._cfg()
+        noisy_params = dict(clean_cfg.capture_engine_params)
+        noisy_params["field_texture"] = {
+            "amplitude_strength": 0.15,
+            "phase_strength_rad": 0.2,
+            "correlation_sigma_px": 1.5,
+            "illumination_strength": 0.05,
+            "illumination_sigma_px": 8.0,
+            "shared_fraction": 0.0,
+        }
+        noisy_params["camera"] = {
+            "shot_noise": True,
+            "photon_gain": 500.0,
+            "read_noise_std": 0.002,
+            "saturation_level": 10.0,
+            "bit_depth": 12,
+        }
+        noisy_cfg = replace(clean_cfg, capture_engine_params=noisy_params)
+        height = np.zeros((clean_cfg.grid_size, clean_cfg.grid_size), dtype=np.float32)
+
+        clean = create_simulation_engine(clean_cfg).simulate_capture(height, rng=np.random.default_rng(23))
+        noisy_a = create_simulation_engine(noisy_cfg).simulate_capture(height, rng=np.random.default_rng(23))
+        noisy_b = create_simulation_engine(noisy_cfg).simulate_capture(height, rng=np.random.default_rng(23))
+
+        self.assertTrue(np.allclose(noisy_a.channels["I_raw"], noisy_b.channels["I_raw"], rtol=0.0, atol=0.0))
+        self.assertGreater(float(np.linalg.norm(noisy_a.channels["I_raw"] - clean.channels["I_raw"])), 1e-4)
+        sampled = noisy_a.meta["sampled_params"]
+        self.assertIn("field_texture", sampled)
+        self.assertIn("camera", sampled)
+
+    def test_localized_coherent_ghost_is_spatially_confined(self) -> None:
+        base_cfg = self._cfg()
+        clean_params = dict(base_cfg.capture_engine_params)
+        clean_params.update(
+            {
+                "defocus_strength": 0.0,
+                "aberration_strength": 0.0,
+                "raw_blur_sigma_px": 0.0,
+                "dic_blur_sigma_px": 0.0,
+            }
+        )
+        clean_cfg = replace(base_cfg, capture_engine_params=clean_params)
+        ghost_params = dict(clean_params)
+        ghost_params["coherent_ghost"] = {
+            "amplitude": 0.25,
+            "tilt_cycles_per_frame": 8.0,
+            "tilt_angle_deg": 20.0,
+            "defocus_delta": 0.0,
+            "phase_offset_rad": 0.3,
+            "visibility_envelope": {
+                "enabled": True,
+                "center_x_norm": -0.35,
+                "center_y_norm": -0.25,
+                "radius_x_norm": 0.22,
+                "radius_y_norm": 0.28,
+                "rotation_deg": 15.0,
+                "order": 4.0,
+            },
+        }
+        localized_cfg = replace(base_cfg, capture_engine_params=ghost_params)
+        height = np.zeros((base_cfg.grid_size, base_cfg.grid_size), dtype=np.float32)
+
+        clean = create_simulation_engine(clean_cfg).simulate_capture(height, rng=np.random.default_rng(31))
+        localized = create_simulation_engine(localized_cfg).simulate_capture(height, rng=np.random.default_rng(31))
+        residual = np.abs(localized.channels["I_raw"] - clean.channels["I_raw"])
+
+        coord = np.linspace(-1.0, 1.0, base_cfg.grid_size, dtype=np.float32)
+        yy, xx = np.meshgrid(coord, coord, indexing="ij")
+        theta = np.deg2rad(15.0)
+        x_rel = xx + 0.35
+        y_rel = yy + 0.25
+        x_rot = np.cos(theta) * x_rel + np.sin(theta) * y_rel
+        y_rot = -np.sin(theta) * x_rel + np.cos(theta) * y_rel
+        distance = (np.abs(x_rot) / 0.22) ** 4 + (np.abs(y_rot) / 0.28) ** 4
+        inside = distance <= 1.0
+        outside = distance >= 16.0
+
+        self.assertGreater(float(np.mean(residual[inside])), 20.0 * float(np.mean(residual[outside]) + 1e-12))
+        sampled = localized.meta["sampled_params"]["coherent_ghost"]
+        self.assertTrue(sampled["visibility_envelope"]["enabled"])
+
+    def test_multiple_local_ghost_components_are_reproducible(self) -> None:
+        base_cfg = self._cfg()
+        params = dict(base_cfg.capture_engine_params)
+        params["coherent_ghost"] = {
+            "components": [
+                {
+                    "amplitude": 0.08,
+                    "tilt_cycles_per_frame": 5.0,
+                    "tilt_angle_deg": 0.0,
+                    "source_support": {
+                        "center_x_norm": -0.2,
+                        "center_y_norm": -0.1,
+                        "radius_x_norm": 0.4,
+                        "radius_y_norm": 0.3,
+                        "order": 2.0,
+                    },
+                    "source_texture": {
+                        "amplitude_strength": 0.2,
+                        "phase_strength_rad": 0.35,
+                        "correlation_sigma_x_px": 0.8,
+                        "correlation_sigma_y_px": 2.0,
+                        "correlation_angle_deg": 25.0,
+                    },
+                },
+                {
+                    "amplitude": 0.05,
+                    "tilt_cycles_per_frame": 7.0,
+                    "tilt_angle_deg": 55.0,
+                    "visibility_envelope": {
+                        "center_x_norm": 0.2,
+                        "center_y_norm": 0.1,
+                        "radius_x_norm": 0.3,
+                        "radius_y_norm": 0.25,
+                        "order": 4.0,
+                    },
+                },
+            ]
+        }
+        cfg = replace(base_cfg, capture_engine_params=params)
+        height = np.zeros((base_cfg.grid_size, base_cfg.grid_size), dtype=np.float32)
+
+        capture_a = create_simulation_engine(cfg).simulate_capture(height, rng=np.random.default_rng(37))
+        capture_b = create_simulation_engine(cfg).simulate_capture(height, rng=np.random.default_rng(37))
+
+        self.assertTrue(np.allclose(capture_a.channels["I_raw"], capture_b.channels["I_raw"], rtol=0.0, atol=0.0))
+        sampled = capture_a.meta["sampled_params"]["coherent_ghost"]
+        self.assertEqual(len(sampled["components"]), 2)
+        self.assertTrue(sampled["components"][0]["source_support"]["enabled"])
+        self.assertTrue(sampled["components"][0]["source_texture"]["enabled"])
+        self.assertTrue(sampled["components"][1]["visibility_envelope"]["enabled"])
+
+    def test_bundle_shared_texture_correlation_is_configurable(self) -> None:
+        base_cfg = self._cfg()
+        height = np.zeros((base_cfg.grid_size, base_cfg.grid_size), dtype=np.float32)
+
+        def _cfg(shared_fraction: float) -> SimulationConfig:
+            params = dict(base_cfg.capture_engine_params)
+            params["field_texture"] = {
+                "amplitude_strength": 0.2,
+                "phase_strength_rad": 0.2,
+                "correlation_sigma_px": 1.0,
+                "illumination_strength": 0.0,
+                "shared_fraction": shared_fraction,
+            }
+            return replace(base_cfg, capture_engine_params=params)
+
+        shared = create_simulation_engine(_cfg(1.0)).simulate_bundle(
+            {"standard": height, "test": height},
+            rng=np.random.default_rng(29),
+        )
+        independent = create_simulation_engine(_cfg(0.0)).simulate_bundle(
+            {"standard": height, "test": height},
+            rng=np.random.default_rng(29),
+        )
+
+        self.assertTrue(
+            np.allclose(
+                shared.captures["standard"].channels["I_raw"],
+                shared.captures["test"].channels["I_raw"],
+                rtol=0.0,
+                atol=1e-7,
+            )
+        )
+        self.assertGreater(
+            float(
+                np.linalg.norm(
+                    independent.captures["standard"].channels["I_raw"]
+                    - independent.captures["test"].channels["I_raw"]
+                )
+            ),
+            1e-4,
+        )
+
     def test_optical_leakage_raw_channel_separates_sign_flips(self) -> None:
         cfg = self._cfg()
         engine = create_simulation_engine(cfg)
@@ -283,16 +482,296 @@ class TestOpticalLeakageLiteEngine(unittest.TestCase):
         self.assertGreater(score_plus, 0.0)
         self.assertLess(score_minus, 0.0)
 
+    def test_dark_port_image_shear_without_leak_matches_legacy(self) -> None:
+        cfg = self._cfg()
+        height = np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32)
+        height[10:20, 12:22] = 0.02
+        legacy = create_simulation_engine(cfg).simulate_capture(height, rng=np.random.default_rng(3))
+        params = dict(cfg.capture_engine_params)
+        params["dark_port"] = {"enabled": True, "mode": "image_shear", "leak_amplitude": 0.0}
+        dark_cfg = SimulationConfig(
+            grid_size=cfg.grid_size,
+            dx=cfg.dx,
+            noise_level=cfg.noise_level,
+            capture_engine=cfg.capture_engine,
+            capture_engine_params=params,
+        )
+        dark = create_simulation_engine(dark_cfg).simulate_capture(height, rng=np.random.default_rng(3))
+        for key in ("I_x", "I_y", "I_raw"):
+            np.testing.assert_allclose(dark.channels[key], legacy.channels[key], rtol=1e-5, atol=1e-7)
+        self.assertEqual(dark.meta["sampled_params"]["dark_port"]["mode"], "image_shear")
+
+    def test_dark_port_leak_raises_smooth_region_floor(self) -> None:
+        cfg = self._cfg()
+        height = np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32)
+
+        def _capture(leak: float):
+            params = dict(cfg.capture_engine_params)
+            params["dark_port"] = {
+                "enabled": True,
+                "mode": "image_shear",
+                "leak_amplitude": leak,
+                "leak_phase_rad": 0.0,
+            }
+            leak_cfg = SimulationConfig(
+                grid_size=cfg.grid_size,
+                dx=cfg.dx,
+                noise_level=cfg.noise_level,
+                capture_engine=cfg.capture_engine,
+                capture_engine_params=params,
+            )
+            return create_simulation_engine(leak_cfg).simulate_capture(height, rng=np.random.default_rng(5))
+
+        without = _capture(0.0)
+        with_leak = _capture(0.3)
+        self.assertGreater(
+            float(np.mean(with_leak.channels["I_x"])),
+            float(np.mean(without.channels["I_x"])),
+        )
+
+    def test_dark_port_fourier_tilt_modulates_field(self) -> None:
+        cfg = self._cfg()
+        params = dict(cfg.capture_engine_params)
+        params["dark_port"] = {
+            "enabled": True,
+            "mode": "fourier_tilt",
+            "fringe_cycles_per_frame": 4.0,
+            "fringe_phase_rad": 0.0,
+            "fringe_angle_deg": 0.0,
+        }
+        tilt_cfg = SimulationConfig(
+            grid_size=cfg.grid_size,
+            dx=cfg.dx,
+            noise_level=cfg.noise_level,
+            capture_engine=cfg.capture_engine,
+            capture_engine_params=params,
+        )
+        height = np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32)
+        capture = create_simulation_engine(tilt_cfg).simulate_capture(height, rng=np.random.default_rng(5))
+        column_means = np.mean(capture.channels["I_x"], axis=0)
+        self.assertGreater(float(np.std(column_means)), 1e-6)
+        self.assertTrue(np.isfinite(capture.channels["I_x"]).all())
+
+    def test_speckle_realizations_reduce_fixture_contrast(self) -> None:
+        def _capture(realizations: int):
+            cfg = SimulationConfig(
+                grid_size=64,
+                dx=0.39,
+                noise_level=0.0,
+                lens_radius_fraction=0.6,
+                capture_engine="optical_leakage_lite",
+                capture_engine_params={
+                    "defocus_strength": 0.0,
+                    "aperture_sigma_freq": 0.08,
+                    "raw_blur_sigma_px": 0.0,
+                    "dic_blur_sigma_px": 0.0,
+                    "shear_px": 1.0,
+                    "reflectance": {
+                        "enabled": True,
+                        "lens_amplitude": 0.1,
+                        "background_amplitude": 2.0,
+                        "background_phase_rough_rad": 2.0,
+                        "background_texture_sigma_px": 2.0,
+                        "speckle_realizations": realizations,
+                    },
+                },
+            )
+            engine = create_simulation_engine(cfg)
+            height = np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32)
+            return create_simulation_engine(cfg).simulate_capture(height, rng=np.random.default_rng(11))
+
+        def _corner_contrast(capture) -> float:
+            corner = np.asarray(capture.channels["I_raw"][:12, :12], dtype=np.float64)
+            return float(np.std(corner) / max(np.mean(corner), 1e-9))
+
+        single = _capture(1)
+        averaged = _capture(12)
+        self.assertLess(_corner_contrast(averaged), 0.7 * _corner_contrast(single))
+        self.assertEqual(
+            averaged.meta["sampled_params"]["reflectance"]["speckle_realizations"], 12
+        )
+
+    def test_scatter_defect_modifier_lights_up_dark_port(self) -> None:
+        cfg = SimulationConfig(
+            grid_size=64,
+            dx=0.39,
+            noise_level=0.0,
+            lens_radius_fraction=0.9,
+            capture_engine="optical_leakage_lite",
+            capture_engine_params={
+                "defocus_strength": 0.0,
+                "aperture_sigma_freq": 0.08,
+                "raw_blur_sigma_px": 0.0,
+                "dic_blur_sigma_px": 0.0,
+                "shear_px": 1.0,
+                "dark_port": {"enabled": True, "mode": "image_shear", "leak_amplitude": 0.0},
+            },
+        )
+        engine = create_simulation_engine(cfg)
+        height = np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32)
+
+        rough = np.random.default_rng(3).uniform(-1.5, 1.5, (cfg.grid_size, cfg.grid_size)).astype(np.float32)
+        support = np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32)
+        support[28:36, 28:36] = 1.0
+        scatter = np.exp(1j * support * rough).astype(np.complex64)
+
+        clean = engine.simulate_capture(height, rng=np.random.default_rng(4))
+        bundle = engine.simulate_bundle(
+            {"standard": height, "test": height},
+            rng=np.random.default_rng(4),
+            extra_field_modifiers={"test": scatter},
+        )
+        test_ix = np.asarray(bundle.captures["test"].channels["I_x"], dtype=np.float64)
+        std_ix = np.asarray(bundle.captures["standard"].channels["I_x"], dtype=np.float64)
+        patch_energy = float(np.mean((test_ix - std_ix)[28:36, 28:36] ** 2))
+        outside_energy = float(np.mean((test_ix - std_ix)[:16, :16] ** 2))
+        self.assertGreater(patch_energy, 100.0 * max(outside_energy, 1e-12))
+        np.testing.assert_allclose(
+            std_ix,
+            np.asarray(clean.channels["I_x"], dtype=np.float64),
+            rtol=1e-5,
+            atol=1e-7,
+        )
+
+    def test_lens_texture_is_static_across_coherence_realizations(self) -> None:
+        def _capture(realizations: int):
+            cfg = SimulationConfig(
+                grid_size=64,
+                dx=0.39,
+                noise_level=0.0,
+                lens_radius_fraction=0.8,
+                capture_engine="optical_leakage_lite",
+                capture_engine_params={
+                    "defocus_strength": 0.0,
+                    "aperture_sigma_freq": 0.08,
+                    "raw_blur_sigma_px": 0.0,
+                    "dic_blur_sigma_px": 0.0,
+                    "shear_px": 1.0,
+                    "reflectance": {
+                        "enabled": True,
+                        "lens_amplitude": 1.0,
+                        "background_amplitude": 0.0,
+                        "background_phase_rough_rad": 0.0,
+                        "lens_phase_rough_rad": 0.4,
+                        "lens_scatter_amplitude": 0.1,
+                        "lens_texture_sigma_px": 3.0,
+                        "speckle_realizations": realizations,
+                    },
+                },
+            )
+            return create_simulation_engine(cfg).simulate_capture(
+                np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32),
+                rng=np.random.default_rng(21),
+            )
+
+        # With only static lens texture (no per-realization randomness), the
+        # K-average must equal the single realization bit for bit.
+        single = _capture(1)
+        averaged = _capture(8)
+        for key in ("I_x", "I_y", "I_raw"):
+            np.testing.assert_allclose(
+                averaged.channels[key], single.channels[key], rtol=1e-5, atol=1e-7
+            )
+
+    def test_point_scatter_sampling_terminates_for_small_aperture(self) -> None:
+        cfg = SimulationConfig(
+            grid_size=64,
+            dx=0.39,
+            noise_level=0.0,
+            lens_radius_fraction=0.05,
+            capture_engine="optical_leakage_lite",
+            capture_engine_params={
+                "defocus_strength": 0.0,
+                "aperture_sigma_freq": 0.08,
+                "raw_blur_sigma_px": 0.0,
+                "dic_blur_sigma_px": 0.0,
+                "shear_px": 1.0,
+                "reflectance": {
+                    "enabled": True,
+                    "lens_amplitude": 1.0,
+                    "background_amplitude": 1.0,
+                    "background_phase_rough_rad": 0.0,
+                    "lens_point_scatter_count": 16,
+                    "lens_point_scatter_amplitude": 0.5,
+                },
+            },
+        )
+        capture = create_simulation_engine(cfg).simulate_capture(
+            np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32),
+            rng=np.random.default_rng(3),
+        )
+        self.assertTrue(np.isfinite(capture.channels["I_raw"]).all())
+
+    def test_fourier_tilt_fringe_count_matches_configuration(self) -> None:
+        cycles = 4.0
+        cfg = SimulationConfig(
+            grid_size=64,
+            dx=0.39,
+            noise_level=0.0,
+            capture_engine="optical_leakage_lite",
+            capture_engine_params={
+                "defocus_strength": 0.0,
+                "aperture_sigma_freq": 0.08,
+                "raw_blur_sigma_px": 0.0,
+                "dic_blur_sigma_px": 0.0,
+                "shear_px": 1.0,
+                "dark_port": {
+                    "enabled": True,
+                    "mode": "fourier_tilt",
+                    "fringe_cycles_per_frame": cycles,
+                    "fringe_phase_rad": 0.3,
+                    "fringe_angle_deg": 0.0,
+                },
+            },
+        )
+        capture = create_simulation_engine(cfg).simulate_capture(
+            np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32),
+            rng=np.random.default_rng(5),
+        )
+        column_means = np.mean(np.asarray(capture.channels["I_x"], dtype=np.float64), axis=0)
+        spectrum = np.abs(np.fft.rfft(column_means - np.mean(column_means)))
+        # Intensity of sin^2 oscillates at twice the field fringe frequency.
+        self.assertEqual(int(np.argmax(spectrum[1:])) + 1, int(2 * cycles))
+
+    def test_reflectance_map_separates_lens_and_background(self) -> None:
+        cfg = SimulationConfig(
+            grid_size=64,
+            dx=0.39,
+            noise_level=0.0,
+            lens_radius_fraction=0.6,
+            capture_engine="optical_leakage_lite",
+            capture_engine_params={
+                "defocus_strength": 0.0,
+                "aperture_sigma_freq": 0.08,
+                "raw_blur_sigma_px": 0.0,
+                "dic_blur_sigma_px": 0.0,
+                "shear_px": 1.0,
+                "reflectance": {
+                    "enabled": True,
+                    "lens_amplitude": 1.0,
+                    "background_amplitude": 0.0,
+                    "background_phase_rough_rad": 0.0,
+                },
+            },
+        )
+        engine = create_simulation_engine(cfg)
+        height = np.zeros((cfg.grid_size, cfg.grid_size), dtype=np.float32)
+        capture = engine.simulate_capture(height, rng=np.random.default_rng(9))
+        raw = capture.channels["I_raw"]
+        center = float(raw[32, 32])
+        corner = float(np.mean(raw[:6, :6]))
+        self.assertGreater(center, 10.0 * max(corner, 1e-9))
+
     def test_generate_dataset_stores_raw_observations(self) -> None:
         cfg = self._cfg()
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir) / "dataset"
             generate_dataset(cfg, output_root=root, train=1, val=0, test=0, seed=5)
-            sample = np.load(root / "train" / "sample_0000.npz")
-            self.assertIn("raw_standard", sample)
-            self.assertIn("raw_reference", sample)
-            self.assertIn("raw_test", sample)
-            self.assertEqual(sample["raw_standard"].shape, sample["ix_standard"].shape)
+            with np.load(root / "train" / "sample_0000.npz") as sample:
+                self.assertIn("raw_standard", sample)
+                self.assertIn("raw_reference", sample)
+                self.assertIn("raw_test", sample)
+                self.assertEqual(sample["raw_standard"].shape, sample["ix_standard"].shape)
 
 
 if __name__ == "__main__":
