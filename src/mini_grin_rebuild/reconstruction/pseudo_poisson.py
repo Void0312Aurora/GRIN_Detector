@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 
 from mini_grin_rebuild.physics.layer import DifferentiableGradientLayer
+from mini_grin_rebuild.physics.phase import phase_scale
 
 
 def _as_bhw(t: torch.Tensor) -> torch.Tensor:
@@ -20,7 +21,7 @@ def _as_bhw(t: torch.Tensor) -> torch.Tensor:
 
 
 def _phase_scale(cfg) -> float:
-    return float((2.0 * math.pi / cfg.wavelength) * (cfg.n_object - cfg.n_air))
+    return phase_scale(cfg)
 
 
 def _poisson_integrate_from_gradients(

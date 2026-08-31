@@ -170,7 +170,9 @@ def main() -> None:
 
     device = torch.device("cpu")
     physics = create_forward_model(cfg.simulation, cfg.training, device=device, freeze=True)
-    phase_scale = (2.0 * math.pi / float(cfg.simulation.wavelength)) * (float(cfg.simulation.n_object) - float(cfg.simulation.n_air))
+    from mini_grin_rebuild.physics.phase import phase_scale as _shared_phase_scale
+
+    phase_scale = _shared_phase_scale(cfg.simulation)
 
     results: dict[str, object] = {
         "config": str(Path(args.config).resolve()),
