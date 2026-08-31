@@ -38,7 +38,12 @@ class DefectDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        data = np.load(self.files[idx])
+        # Close the underlying zip handle eagerly; lingering NpzFile handles
+        # block directory cleanup on Windows.
+        with np.load(self.files[idx]) as data:
+            return self._build_sample(data, idx)
+
+    def _build_sample(self, data, idx: int) -> Dict[str, torch.Tensor]:
         diff_ix_st = self._as_tensor(data, "diff_ix_st", fallback="diff_ix")
         diff_iy_st = self._as_tensor(data, "diff_iy_st", fallback="diff_iy")
         inputs = torch.stack([diff_ix_st, diff_iy_st], dim=0)
